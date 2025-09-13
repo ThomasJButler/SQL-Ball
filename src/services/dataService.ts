@@ -191,11 +191,27 @@ class DataService {
       }
     }
     
-    // Provide helpful error message based on the situation
-    if (!footballDataAPI.hasApiKey()) {
-      throw new Error('API key required. Please set up your Football-Data.org API key in Settings or through the setup wizard.');
-    } else {
-      throw new Error('Unable to fetch matches. Please check your internet connection and API key validity.');
+    // Fall back to Supabase if API is not available
+    console.log('📊 Falling back to Supabase for match data');
+    try {
+      const { getRecentMatches } = await import('../lib/supabase');
+      const matches = await getRecentMatches(recent ? 50 : 100);
+      
+      // Filter based on options
+      const now = new Date();
+      let filteredMatches = matches;
+      
+      if (upcoming) {
+        filteredMatches = matches.filter(m => new Date(m.date) > now).slice(0, 20);
+      } else if (recent) {
+        filteredMatches = matches.filter(m => new Date(m.date) <= now).slice(0, 20);
+      }
+      
+      return filteredMatches;
+    } catch (supabaseError) {
+      console.error('Error fetching from Supabase:', supabaseError);
+      // Return empty array instead of throwing
+      return [];
     }
   }
   

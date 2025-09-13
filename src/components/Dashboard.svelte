@@ -10,6 +10,7 @@
     LinearScale,
     CategoryScale,
     PointElement,
+    Filler,
     type ChartData
   } from 'chart.js';
   import { dataService } from '../services/dataService';
@@ -26,7 +27,8 @@
     LineElement,
     LinearScale,
     CategoryScale,
-    PointElement
+    PointElement,
+    Filler
   );
 
   let recentMatches: Match[] = [];

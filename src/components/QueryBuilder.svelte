@@ -12,20 +12,26 @@
   let queryGenerator: QueryGenerator;
   let showExamples = false;
 
+  // SQL examples since we're in SQL-only mode for now
   const exampleQueries = [
-    "Show me the biggest home wins this season",
-    "Which teams score the most goals?",
-    "Find matches with more than 5 red cards",
-    "What was the highest scoring match?",
-    "Show teams with the best away record",
-    "Find goalless draws",
-    "Which referee gives the most cards?",
-    "Show Manchester United's last 5 matches"
+    "SELECT * FROM matches LIMIT 10",
+    "SELECT * FROM matches WHERE home_goals > 3 LIMIT 10",
+    "SELECT home_team, away_team, home_goals, away_goals FROM matches LIMIT 20",
+    "SELECT * FROM matches ORDER BY date DESC LIMIT 5"
   ];
 
   onMount(() => {
-    // Initialize query generator (API key would come from settings)
-    queryGenerator = new QueryGenerator();
+    // Only initialize query generator if we have an OpenAI API key
+    const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
+    if (openAIKey && openAIKey !== '') {
+      try {
+        queryGenerator = new QueryGenerator(openAIKey);
+      } catch (err) {
+        console.warn('QueryGenerator initialization failed, will use SQL-only mode', err);
+      }
+    } else {
+      console.log('📝 SQL-only mode: No OpenAI API key found. You can still write SQL queries directly.');
+    }
   });
 
   async function handleSubmit() {
@@ -37,17 +43,101 @@
     executionResult = [];
 
     try {
-      // Generate SQL from natural language
-      queryResult = await queryGenerator.generateQuery(naturalQuery);
+      // Check if we have a query generator (requires OpenAI API key)
+      if (!queryGenerator) {
+        // Fallback to basic SQL mode
+        queryResult = {
+          sql: naturalQuery, // Assume user entered SQL directly
+          explanation: 'Direct SQL query execution (RAG mode requires OpenAI API key)',
+          confidence: 1,
+          tables: []
+        };
+      } else {
+        // Generate SQL from natural language
+        queryResult = await queryGenerator.generateQuery(naturalQuery);
+      }
       
-      // Execute the generated SQL
-      const { data, error: execError } = await supabase
-        .rpc('execute_sql', { query: queryResult.sql })
-        .single();
+      // Parse and execute SQL queries
+      const sqlLower = queryResult.sql.toLowerCase().trim();
+      
+      if (!sqlLower.startsWith('select')) {
+        throw new Error('Only SELECT queries are supported in demo mode');
+      }
+      
+      // Extract table name
+      const tableMatch = sqlLower.match(/from\s+(\w+)/);
+      if (!tableMatch) {
+        throw new Error('Could not identify table in query');
+      }
+      
+      const tableName = tableMatch[1];
+      
+      // Build Supabase query based on SQL
+      let query = supabase.from(tableName);
+      
+      // Extract columns (if not SELECT *)
+      const selectMatch = queryResult.sql.match(/select\s+(.*?)\s+from/i);
+      if (selectMatch && selectMatch[1].trim() !== '*') {
+        const columns = selectMatch[1].split(',').map(c => c.trim());
+        query = query.select(columns.join(','));
+      } else {
+        query = query.select('*');
+      }
+      
+      // Handle WHERE clause
+      const whereMatch = sqlLower.match(/where\s+(.*?)(?:\s+order\s+by|\s+limit|$)/);
+      if (whereMatch) {
+        const whereClause = whereMatch[1];
+        
+        // Parse simple WHERE conditions (column operator value)
+        const conditionMatch = whereClause.match(/(\w+)\s*(=|>|<|>=|<=|!=)\s*(.+)/);
+        if (conditionMatch) {
+          const [, column, operator, value] = conditionMatch;
+          const cleanValue = value.replace(/['"`]/g, '').trim();
+          
+          // Map SQL operators to Supabase filters
+          if (operator === '=') {
+            query = query.eq(column, isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue));
+          } else if (operator === '>') {
+            query = query.gt(column, Number(cleanValue));
+          } else if (operator === '<') {
+            query = query.lt(column, Number(cleanValue));
+          } else if (operator === '>=') {
+            query = query.gte(column, Number(cleanValue));
+          } else if (operator === '<=') {
+            query = query.lte(column, Number(cleanValue));
+          } else if (operator === '!=') {
+            query = query.neq(column, isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue));
+          }
+        }
+      }
+      
+      // Handle ORDER BY
+      const orderMatch = sqlLower.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
+      if (orderMatch) {
+        const [, orderColumn, direction] = orderMatch;
+        query = query.order(orderColumn, { ascending: direction !== 'desc' });
+      }
+      
+      // Handle LIMIT
+      const limitMatch = sqlLower.match(/limit\s+(\d+)/);
+      if (limitMatch) {
+        query = query.limit(parseInt(limitMatch[1]));
+      } else {
+        // Default limit for safety
+        query = query.limit(100);
+      }
+      
+      // Execute query
+      const { data, error: execError } = await query;
       
       if (execError) throw execError;
-      
       executionResult = data || [];
+      
+      // Add info about results
+      if (executionResult.length === 0) {
+        error = 'Query executed successfully but returned no results';
+      }
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
       console.error('Query error:', err);
@@ -98,7 +188,7 @@
         <input
           type="text"
           bind:value={naturalQuery}
-          placeholder="Ask a question about match data..."
+          placeholder="Enter SQL query (e.g., SELECT * FROM matches LIMIT 10)"
           class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder-slate-500"
           disabled={isLoading}
         />

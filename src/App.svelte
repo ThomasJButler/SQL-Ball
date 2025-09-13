@@ -15,6 +15,7 @@
   import TopScorers from './components/TopScorers.svelte';
   import LiveMatches from './components/LiveMatches.svelte';
   import PlayerProfile from './components/PlayerProfile.svelte';
+  import VisualQueryBuilder from './components/VisualQueryBuilder.svelte';
   import { onMount } from 'svelte';
 
   let currentView = 'Dashboard'; // Default view
@@ -54,10 +55,11 @@
     const apiKey = localStorage.getItem('football_data_api_key');
     hasApiKey = !!apiKey;
     
+    // Disabled for testing - using Supabase instead of Football-Data API
     // Show setup wizard if no API key found
-    if (!hasApiKey) {
-      showApiSetup = true;
-    }
+    // if (!hasApiKey) {
+    //   showApiSetup = true;
+    // }
   }
 
   async function handleApiSetupComplete(event: CustomEvent<{ apiKey: string }>) {
@@ -126,10 +128,7 @@
         {:else if currentView === 'Pattern Discovery'}
           <PatternDiscovery />
         {:else if currentView === 'SQL Explorer'}
-          <div class="text-center py-12">
-            <h2 class="text-2xl font-bold mb-4">SQL Explorer - Coming Soon</h2>
-            <p>Interactive database schema browser</p>
-          </div>
+          <VisualQueryBuilder />
         {:else if currentView === 'AI Assistant'}
           <AiAssistant />
         {:else if currentView === 'Season Stats'}

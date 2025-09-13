@@ -243,6 +243,7 @@
         </div>
       </div>
       
+      <!-- Modal temporarily disabled for testing
       <button
         on:click={() => showProModal = true}
         class="btn {hasApiKey ? 'btn-secondary' : 'btn-primary'} btn-sm flex items-center space-x-2"
@@ -254,7 +255,7 @@
           <Sparkles class="w-4 h-4" />
           <span>Upgrade</span>
         {/if}
-      </button>
+      </button> -->
     </div>
   </div>
 
@@ -341,9 +342,12 @@
     {#if !hasApiKey}
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
         Free mode uses smart database queries. 
-        <button on:click={() => showProModal = true} class="text-primary hover:underline">
+        <!-- <button on:click={() => showProModal = true} class="text-primary hover:underline">
           Add API key for unlimited AI
-        </button>
+        </button> -->
+        <span class="text-primary">
+          Add API key for unlimited AI
+        </span>
       </p>
     {/if}
   </div>

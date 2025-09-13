@@ -1,6 +1,7 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { Document } from '@langchain/core/documents';
+import { ChromaVectorStore } from '@langchain/community/vectorstores/chroma';
 
 export interface TableSchema {
   name: string;
@@ -97,27 +98,51 @@ export const MATCH_DATABASE_SCHEMA: TableSchema[] = [
 export class SchemaEmbeddings {
   private vectorStore: Chroma | null = null;
   private embeddings: OpenAIEmbeddings;
+  private initialized: boolean = false;
 
   constructor(apiKey?: string) {
     this.embeddings = new OpenAIEmbeddings({
-      openAIApiKey: apiKey || process.env.OPENAI_API_KEY,
-      modelName: 'text-embedding-ada-002'
+      openAIApiKey: apiKey || import.meta.env.VITE_OPENAI_API_KEY || '',
+      modelName: 'text-embedding-3-small' // Updated model
     });
   }
 
-  async initialize() {
-    // Create documents from schema
-    const documents = this.createSchemaDocuments();
-    
-    // Initialize Chroma vector store
-    this.vectorStore = await Chroma.fromDocuments(
-      documents,
-      this.embeddings,
-      {
-        collectionName: 'sql-ball-schema',
-        url: 'http://localhost:8000', // Default Chroma URL
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      console.log('🔍 Initializing schema embeddings...');
+      
+      // Create documents from schema
+      const documents = this.createSchemaDocuments();
+      console.log(`📄 Created ${documents.length} schema documents`);
+      
+      // Check if we have OpenAI API key
+      const apiKey = this.embeddings.openAIApiKey;
+      if (!apiKey || apiKey === '') {
+        console.warn('⚠️ No OpenAI API key found - using fallback text search');
+        this.initialized = true;
+        return;
       }
-    );
+      
+      // Initialize Chroma vector store with persistent collection
+      this.vectorStore = new Chroma(this.embeddings, {
+        collectionName: 'sql-ball-schema',
+        url: undefined, // Use in-memory for now since we don't have server running
+        numDimensions: 1536, // Dimension for text-embedding-3-small
+      });
+      
+      // Add documents to the vector store
+      await this.vectorStore.addDocuments(documents);
+      
+      console.log('✅ Schema embeddings initialized successfully!');
+      this.initialized = true;
+      
+    } catch (error) {
+      console.error('❌ Failed to initialize schema embeddings:', error);
+      // Continue without vector search - use fallback methods
+      this.initialized = true;
+    }
   }
 
   private createSchemaDocuments(): Document[] {
@@ -167,13 +192,57 @@ export class SchemaEmbeddings {
     return documents;
   }
 
-  async searchSchema(query: string, k: number = 5) {
+  async searchSchema(query: string, k: number = 5): Promise<Document[]> {
+    await this.initialize();
+    
     if (!this.vectorStore) {
-      await this.initialize();
+      // Fallback: Simple text-based search
+      console.log('🔍 Using fallback text search (no vector store)');
+      return this.fallbackTextSearch(query, k);
     }
     
-    const results = await this.vectorStore!.similaritySearch(query, k);
-    return results;
+    try {
+      const results = await this.vectorStore.similaritySearch(query, k);
+      console.log(`🎯 Found ${results.length} relevant schema matches`);
+      return results;
+    } catch (error) {
+      console.error('Vector search failed, using fallback:', error);
+      return this.fallbackTextSearch(query, k);
+    }
+  }
+
+  private fallbackTextSearch(query: string, k: number = 5): Document[] {
+    const documents = this.createSchemaDocuments();
+    const queryLower = query.toLowerCase();
+    
+    // Score documents based on text similarity
+    const scoredDocs = documents.map(doc => {
+      const content = doc.pageContent.toLowerCase();
+      const metadata = JSON.stringify(doc.metadata).toLowerCase();
+      
+      let score = 0;
+      
+      // Exact word matches get higher scores
+      const queryWords = queryLower.split(' ');
+      queryWords.forEach(word => {
+        if (word.length > 2) { // Ignore short words
+          if (content.includes(word)) score += 3;
+          if (metadata.includes(word)) score += 2;
+        }
+      });
+      
+      // Partial matches
+      if (content.includes(queryLower)) score += 5;
+      
+      return { doc, score };
+    });
+    
+    // Sort by score and return top k
+    return scoredDocs
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, k)
+      .map(item => item.doc);
   }
 
   async getRelevantTables(query: string): Promise<string[]> {
