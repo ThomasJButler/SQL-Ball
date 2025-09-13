@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, type Match, type UnusualMatch } from '../supabase';
 
 export interface Pattern {
   id: string;
@@ -40,7 +40,7 @@ export class PatternDiscovery {
 
     if (error) throw error;
 
-    return data.map(match => ({
+    return (data as Match[]).map((match: Match) => ({
       id: match.id,
       type: 'upset' as PatternType,
       title: `Major Upset: ${match.away_team} destroyed ${match.home_team}`,
@@ -62,7 +62,7 @@ export class PatternDiscovery {
 
     if (error) throw error;
 
-    return data.map(match => ({
+    return (data as UnusualMatch[]).map((match: UnusualMatch) => ({
       id: match.id,
       type: 'high-scoring' as PatternType,
       title: `Goal Fest: ${match.home_team} vs ${match.away_team}`,
@@ -84,7 +84,7 @@ export class PatternDiscovery {
 
     if (error) throw error;
 
-    return data.map(match => {
+    return (data as Match[]).map((match: Match) => {
       const homeInefficient = match.home_shots_target >= 10 && match.home_goals <= 1;
       const awayInefficient = match.away_shots_target >= 10 && match.away_goals <= 1;
       const team = homeInefficient ? match.home_team : match.away_team;
@@ -114,7 +114,7 @@ export class PatternDiscovery {
 
     if (error) throw error;
 
-    return data.map(match => {
+    return (data as Match[]).map((match: Match) => {
       const homeComeback = match.half_time_result === 'A' && match.full_time_result === 'H';
       const team = homeComeback ? match.home_team : match.away_team;
       const opponent = homeComeback ? match.away_team : match.home_team;
@@ -144,7 +144,7 @@ export class PatternDiscovery {
     // Group by referee and calculate average cards
     const refereeStats = new Map<string, { matches: number, totalCards: number, redCards: number }>();
     
-    data.forEach(match => {
+    data.forEach((match: Match) => {
       const totalCards = (match.home_yellows || 0) + (match.away_yellows || 0) + 
                         (match.home_reds || 0) + (match.away_reds || 0);
       const redCards = (match.home_reds || 0) + (match.away_reds || 0);
@@ -184,7 +184,7 @@ export class PatternDiscovery {
       .select('home_team')
       .limit(1000);
 
-    const uniqueTeams = [...new Set(teams?.map(t => t.home_team) || [])];
+    const uniqueTeams = [...new Set(teams?.map((t: { home_team: string }) => t.home_team) || [])];
     const patterns: Pattern[] = [];
 
     for (const team of uniqueTeams.slice(0, 20)) { // Limit to 20 teams for performance

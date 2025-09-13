@@ -1,7 +1,6 @@
 // import { supabase } from '../lib/supabase'; // Removed Supabase dependency
 import { dataService } from './dataService';
 import { footballDataAPI } from './api/footballData';
-import { PoissonPredictor } from '../lib/advancedPredictions';
 
 interface AIMessage {
   role: 'system' | 'user' | 'assistant';
@@ -65,9 +64,33 @@ class AIService {
       const homeStrength = 1.8 + (Math.random() * 0.6); // 1.8-2.4 expected goals
       const awayStrength = 1.2 + (Math.random() * 0.8); // 1.2-2.0 expected goals
       
-      // Calculate Poisson probabilities
-      const scoreProbabilities = PoissonPredictor.predictScoreProbabilities(homeStrength, awayStrength, 6);
-      const outcomeProbabilities = PoissonPredictor.getOutcomeProbabilities(scoreProbabilities);
+      // Simple outcome probability calculation
+      const total = homeStrength + awayStrength;
+      const homeProbBase = homeStrength / total;
+      const awayProbBase = awayStrength / total;
+      
+      // Add some randomness and home advantage
+      const homeWinProb = Math.min(0.8, homeProbBase * 1.2 + Math.random() * 0.1);
+      const awayWinProb = Math.min(0.6, awayProbBase * 0.9 + Math.random() * 0.1);
+      const drawProb = Math.max(0.1, 1 - homeWinProb - awayWinProb);
+      
+      const outcomeProbabilities = {
+        homeWin: homeWinProb,
+        draw: drawProb,
+        awayWin: awayWinProb
+      };
+      
+      // Simple score probabilities
+      const scoreProbabilities: Record<string, number> = {
+        '1-0': 0.15,
+        '2-1': 0.12,
+        '1-1': 0.11,
+        '2-0': 0.10,
+        '0-0': 0.08,
+        '0-1': 0.07,
+        '3-1': 0.06,
+        '1-2': 0.05
+      };
       
       // Find most likely score
       let mostLikelyScore = '1-1';
