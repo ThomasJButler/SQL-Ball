@@ -13,7 +13,7 @@
     type ChartData
   } from 'chart.js';
   import { dataService } from '../services/dataService';
-  import { predictionTracker } from '../services/predictionTracker';
+  import { PatternDiscovery } from '../lib/analytics/patternDiscovery';
   import type { Match } from '../types';
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
@@ -30,21 +30,21 @@
   );
 
   let recentMatches: Match[] = [];
-  let predictionAccuracy: number[] = [];
-  let topPredictions: any[] = [];
+  let patterns: any[] = [];
+  let unusualMatches: any[] = [];
   let loading = true;
   let error: string | null = null;
-  let overallAccuracy = tweened(0, { duration: 1500, easing: cubicOut });
-  let profitMargin = tweened(0, { duration: 1800, easing: cubicOut });
-  let totalPredictions = tweened(0, { duration: 1200, easing: cubicOut });
-  let betsPlaced = tweened(0, { duration: 1400, easing: cubicOut });
+  let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
+  let patternsFound = tweened(0, { duration: 1800, easing: cubicOut });
+  let anomaliesDetected = tweened(0, { duration: 1200, easing: cubicOut });
+  let queriesExecuted = tweened(0, { duration: 1400, easing: cubicOut });
 
   let recentPerformance: ChartData<"line", number[], string> = {
     labels: [] as string[],
     datasets: [{
-      label: 'Prediction Accuracy',
+      label: 'Patterns Discovered',
       data: [] as number[],
-      borderColor: '#4299e1',
+      borderColor: '#00ff00',
       tension: 0.4,
       fill: false
     }]
@@ -67,33 +67,33 @@
   // Reactive stats that update with animations
   $: stats = [
     {
-      title: 'Prediction Accuracy',
-      value: `${$overallAccuracy.toFixed(1)}%`,
-      change: '+2.1%',
+      title: 'Total Matches',
+      value: $totalMatches.toLocaleString(),
+      change: '+38 this week',
       icon: Target,
-      color: 'text-primary dark:text-primary-light',
-      bgColor: 'bg-primary/10 dark:bg-primary/20'
+      color: 'text-green-500 dark:text-green-400',
+      bgColor: 'bg-green-500/10 dark:bg-green-500/20'
     },
     {
-      title: 'Total Profit',
-      value: `£${$profitMargin.toLocaleString()}`,
-      change: '+£150 this week',
+      title: 'Patterns Found',
+      value: $patternsFound.toLocaleString(),
+      change: '+12 new',
       icon: TrendingUp,
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20'
     },
     {
-      title: 'Active Users',
-      value: $totalPredictions.toLocaleString(),
-      change: '+50 today',
+      title: 'Anomalies',
+      value: $anomaliesDetected.toLocaleString(),
+      change: '+5 unusual',
       icon: Users,
       color: 'text-sky-600 dark:text-sky-400',
       bgColor: 'bg-sky-500/10 dark:bg-sky-500/20'
     },
     {
-      title: 'Bets Placed',
-      value: $betsPlaced.toLocaleString(),
-      change: '+120 this week',
+      title: 'Queries Run',
+      value: $queriesExecuted.toLocaleString(),
+      change: '+234 today',
       icon: BarChart2,
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-500/10 dark:bg-amber-500/20'

@@ -4,6 +4,8 @@
   import MobileNav from './components/MobileNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
   import MatchList from './components/MatchList.svelte';
+  import QueryBuilder from './components/QueryBuilder.svelte';
+  import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
   import LiveTicker from './components/LiveTicker.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
@@ -120,15 +122,9 @@
         {:else if currentView === 'Matches'}
           <MatchList />
         {:else if currentView === 'Query Builder'}
-          <div class="text-center py-12">
-            <h2 class="text-2xl font-bold mb-4">Query Builder - Coming Soon</h2>
-            <p>Natural language to SQL conversion</p>
-          </div>
+          <QueryBuilder />
         {:else if currentView === 'Pattern Discovery'}
-          <div class="text-center py-12">
-            <h2 class="text-2xl font-bold mb-4">Pattern Discovery - Coming Soon</h2>
-            <p>Discover unusual statistics and anomalies</p>
-          </div>
+          <PatternDiscovery />
         {:else if currentView === 'SQL Explorer'}
           <div class="text-center py-12">
             <h2 class="text-2xl font-bold mb-4">SQL Explorer - Coming Soon</h2>

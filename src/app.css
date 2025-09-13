@@ -2,19 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 🚀 ENHANCED MODERN CSS VARIABLES */
+/* 🚀 MATRIX THEME CSS VARIABLES */
 :root {
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --gradient-accent: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --gradient-success: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  --gradient-warning: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  --gradient-dark: linear-gradient(135deg, #232526 0%, #414345 100%);
-  --gradient-football: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  --shadow-elevated: 0 20px 40px -14px rgba(0, 0, 0, 0.25);
-  --shadow-floating: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 30px rgba(102, 126, 234, 0.5);
+  --matrix-green: #00ff00;
+  --matrix-green-dark: #00cc00;
+  --matrix-green-light: #66ff66;
+  --matrix-cyan: #00ffff;
+  --matrix-black: #0a0a0a;
+  --matrix-dark: #0d0d0d;
+  --gradient-matrix: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+  --gradient-cyber: linear-gradient(135deg, #00ffff 0%, #00ff00 100%);
+  --gradient-dark: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  --shadow-matrix: 0 0 20px rgba(0, 255, 0, 0.5);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 255, 0, 0.1);
+  --shadow-elevated: 0 20px 40px -14px rgba(0, 0, 0, 0.8);
+  --shadow-floating: 0 25px 50px -12px rgba(0, 255, 0, 0.3);
+  --shadow-glow: 0 0 30px rgba(0, 255, 0, 0.6);
 }
 
 @layer base {
@@ -59,7 +62,7 @@
 
   body {
     @apply font-sans antialiased text-slate-800 dark:text-slate-200;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gradient-dark);
     position: relative;
     min-height: 100vh;
     overflow-x: hidden;
@@ -843,4 +846,116 @@
   .stat-change {
     @apply text-xs font-medium;
   }
+}
+/* 🌐 MATRIX THEME STYLES */
+.matrix-glow {
+  text-shadow: 0 0 10px var(--matrix-green), 0 0 20px var(--matrix-green);
+}
+
+.matrix-border {
+  border: 1px solid var(--matrix-green);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.matrix-card {
+  background: linear-gradient(135deg, rgba(0, 255, 0, 0.05) 0%, rgba(0, 255, 0, 0.02) 100%);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 255, 0, 0.1);
+}
+
+/* Matrix Rain Animation */
+@keyframes matrix-rain {
+  0% { transform: translateY(-100%); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.matrix-rain {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.matrix-rain::before {
+  content: '01010101010101010101';
+  position: absolute;
+  color: var(--matrix-green);
+  font-family: monospace;
+  font-size: 10px;
+  animation: matrix-rain 5s linear infinite;
+  opacity: 0.1;
+}
+
+/* Cyber Grid Background */
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Terminal Text Effect */
+.terminal-text {
+  font-family: 'Courier New', monospace;
+  color: var(--matrix-green);
+  text-shadow: 0 0 5px var(--matrix-green);
+}
+
+/* Glitch Effect */
+@keyframes glitch {
+  0% {
+    text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75),
+                -0.05em -0.025em 0 rgba(0, 255, 0, 0.75),
+                0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  14% {
+    text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75),
+                -0.05em -0.025em 0 rgba(0, 255, 0, 0.75),
+                0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  15% {
+    text-shadow: -0.05em -0.025em 0 rgba(255, 0, 0, 0.75),
+                0.025em 0.025em 0 rgba(0, 255, 0, 0.75),
+                -0.05em -0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  49% {
+    text-shadow: -0.05em -0.025em 0 rgba(255, 0, 0, 0.75),
+                0.025em 0.025em 0 rgba(0, 255, 0, 0.75),
+                -0.05em -0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  50% {
+    text-shadow: 0.025em 0.05em 0 rgba(255, 0, 0, 0.75),
+                0.05em 0 0 rgba(0, 255, 0, 0.75),
+                0 -0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  99% {
+    text-shadow: 0.025em 0.05em 0 rgba(255, 0, 0, 0.75),
+                0.05em 0 0 rgba(0, 255, 0, 0.75),
+                0 -0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+  100% {
+    text-shadow: -0.025em 0 0 rgba(255, 0, 0, 0.75),
+                -0.025em -0.025em 0 rgba(0, 255, 0, 0.75),
+                -0.025em -0.05em 0 rgba(0, 0, 255, 0.75);
+  }
+}
+
+.glitch {
+  animation: glitch 1s linear infinite;
+}
+
+/* Pulse Effect for Important Elements */
+@keyframes matrix-pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--matrix-green); }
+  50% { box-shadow: 0 0 30px var(--matrix-green), 0 0 50px var(--matrix-green); }
+}
+
+.matrix-pulse {
+  animation: matrix-pulse 2s ease-in-out infinite;
 }
