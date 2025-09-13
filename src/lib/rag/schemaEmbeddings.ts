@@ -1,7 +1,6 @@
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { Document } from '@langchain/core/documents';
-import { ChromaVectorStore } from '@langchain/community/vectorstores/chroma';
 
 export interface TableSchema {
   name: string;
@@ -99,10 +98,13 @@ export class SchemaEmbeddings {
   private vectorStore: Chroma | null = null;
   private embeddings: OpenAIEmbeddings;
   private initialized: boolean = false;
+  private apiKey: string;
 
   constructor(apiKey?: string) {
+    const openAIApiKey = apiKey || import.meta.env.VITE_OPENAI_API_KEY || '';
+    this.apiKey = openAIApiKey;
     this.embeddings = new OpenAIEmbeddings({
-      openAIApiKey: apiKey || import.meta.env.VITE_OPENAI_API_KEY || '',
+      openAIApiKey,
       modelName: 'text-embedding-3-small' // Updated model
     });
   }
@@ -118,8 +120,7 @@ export class SchemaEmbeddings {
       console.log(`📄 Created ${documents.length} schema documents`);
       
       // Check if we have OpenAI API key
-      const apiKey = this.embeddings.openAIApiKey;
-      if (!apiKey || apiKey === '') {
+      if (!this.apiKey || this.apiKey === '') {
         console.warn('⚠️ No OpenAI API key found - using fallback text search');
         this.initialized = true;
         return;

@@ -103,12 +103,11 @@ WHERE result IS NOT NULL`
       }
 
       const { data, error: execError } = await supabase
-        .rpc('execute_sql', { query_text: query })
-        .single();
+        .rpc('execute_sql', { query_text: query });
 
       if (execError) throw execError;
 
-      results = data || [];
+      results = Array.isArray(data) ? data : (data ? [data] : []);
       executionTime = performance.now() - startTime;
 
       // Add to history

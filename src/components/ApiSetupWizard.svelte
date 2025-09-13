@@ -75,9 +75,9 @@
         console.error('API Error:', errorText);
         validationError = `API error (${response.status}): ${response.statusText}. Please try again.`;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Network error:', error);
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      if (error?.name === 'TypeError' && error?.message?.includes('fetch')) {
         validationError = 'Network error. Please check your internet connection and try again.';
       } else {
         validationError = 'Connection failed. Please check your internet connection and try again.';

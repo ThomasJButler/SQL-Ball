@@ -204,16 +204,16 @@
     try {
       // For now, execute a simplified version using Supabase client
       // This is a basic implementation - a full version would parse the SQL properly
-      let query = supabase.from('matches');
+      let query: any;
 
       if (selectedColumns.length > 0 && !selectedColumns.some(col => col.column === '*')) {
         const columns = selectedColumns
           .filter(col => col.table === 'matches')
           .map(col => col.column)
           .join(',');
-        query = query.select(columns);
+        query = supabase.from('matches').select(columns);
       } else {
-        query = query.select('*');
+        query = supabase.from('matches').select('*');
       }
 
       // Apply WHERE conditions (simplified)

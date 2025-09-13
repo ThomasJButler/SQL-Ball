@@ -44,9 +44,9 @@ export class PatternDiscovery {
       id: match.id,
       type: 'upset' as PatternType,
       title: `Major Upset: ${match.away_team} destroyed ${match.home_team}`,
-      description: `${match.away_team} won ${match.away_goals}-${match.home_goals} away at ${match.home_team} - a stunning ${match.away_goals - match.home_goals} goal victory!`,
+      description: `${match.away_team} won ${match.away_goals ?? 0}-${match.home_goals ?? 0} away at ${match.home_team} - a stunning ${(match.away_goals ?? 0) - (match.home_goals ?? 0)} goal victory!`,
       data: match,
-      significance: match.away_goals - match.home_goals >= 5 ? 'very-high' : 'high',
+      significance: (match.away_goals ?? 0) - (match.home_goals ?? 0) >= 5 ? 'very-high' : 'high',
       query: `SELECT * FROM matches WHERE id = '${match.id}'`
     }));
   }
@@ -66,7 +66,7 @@ export class PatternDiscovery {
       id: match.id,
       type: 'high-scoring' as PatternType,
       title: `Goal Fest: ${match.home_team} vs ${match.away_team}`,
-      description: `An incredible ${match.total_goals} goals scored! ${match.home_team} ${match.home_goals}-${match.away_goals} ${match.away_team}`,
+      description: `An incredible ${match.total_goals} goals scored! ${match.home_team} ${match.home_goals ?? 0}-${match.away_goals ?? 0} ${match.away_team}`,
       data: match,
       significance: match.total_goals >= 10 ? 'very-high' : match.total_goals >= 8 ? 'high' : 'medium',
       query: `SELECT * FROM matches WHERE (home_goals + away_goals) >= ${minGoals}`
@@ -85,8 +85,8 @@ export class PatternDiscovery {
     if (error) throw error;
 
     return (data as Match[]).map((match: Match) => {
-      const homeInefficient = match.home_shots_target >= 10 && match.home_goals <= 1;
-      const awayInefficient = match.away_shots_target >= 10 && match.away_goals <= 1;
+      const homeInefficient = (match.home_shots_target ?? 0) >= 10 && (match.home_goals ?? 0) <= 1;
+      const awayInefficient = (match.away_shots_target ?? 0) >= 10 && (match.away_goals ?? 0) <= 1;
       const team = homeInefficient ? match.home_team : match.away_team;
       const shots = homeInefficient ? match.home_shots_target : match.away_shots_target;
       const goals = homeInefficient ? match.home_goals : match.away_goals;
@@ -95,9 +95,9 @@ export class PatternDiscovery {
         id: match.id,
         type: 'inefficient' as PatternType,
         title: `Wasteful: ${team} couldn't convert chances`,
-        description: `${team} had ${shots} shots on target but only scored ${goals} goal(s) - a conversion rate of ${((goals / shots) * 100).toFixed(1)}%`,
+        description: `${team} had ${shots ?? 0} shots on target but only scored ${goals ?? 0} goal(s) - a conversion rate of ${shots ? (((goals ?? 0) / shots) * 100).toFixed(1) : '0.0'}%`,
         data: match,
-        significance: shots >= 15 ? 'high' : 'medium',
+        significance: (shots ?? 0) >= 15 ? 'high' : 'medium',
         query: `SELECT * FROM matches WHERE id = '${match.id}'`
       };
     });
@@ -123,7 +123,7 @@ export class PatternDiscovery {
         id: match.id,
         type: 'comeback' as PatternType,
         title: `Comeback Kings: ${team} turned it around`,
-        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_goals}-${match.away_goals}`,
+        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_goals ?? 0}-${match.away_goals ?? 0}`,
         data: match,
         significance: 'high',
         query: `SELECT * FROM matches WHERE half_time_result != full_time_result`
@@ -149,8 +149,8 @@ export class PatternDiscovery {
                         (match.home_reds || 0) + (match.away_reds || 0);
       const redCards = (match.home_reds || 0) + (match.away_reds || 0);
       
-      const current = refereeStats.get(match.referee) || { matches: 0, totalCards: 0, redCards: 0 };
-      refereeStats.set(match.referee, {
+      const current = refereeStats.get(match.referee ?? '') || { matches: 0, totalCards: 0, redCards: 0 };
+      refereeStats.set(match.referee ?? '', {
         matches: current.matches + 1,
         totalCards: current.totalCards + totalCards,
         redCards: current.redCards + redCards

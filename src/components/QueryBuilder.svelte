@@ -73,15 +73,15 @@
       const tableName = tableMatch[1];
       
       // Build Supabase query based on SQL
-      let query = supabase.from(tableName);
-      
+      let query: any;
+
       // Extract columns (if not SELECT *)
       const selectMatch = queryResult.sql.match(/select\s+(.*?)\s+from/i);
       if (selectMatch && selectMatch[1].trim() !== '*') {
         const columns = selectMatch[1].split(',').map(c => c.trim());
-        query = query.select(columns.join(','));
+        query = supabase.from(tableName).select(columns.join(','));
       } else {
-        query = query.select('*');
+        query = supabase.from(tableName).select('*');
       }
       
       // Handle WHERE clause

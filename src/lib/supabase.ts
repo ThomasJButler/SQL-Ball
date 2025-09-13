@@ -1,46 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Match, Season as BaseSeason } from '../types';
 
-// Database types
-export interface Match {
-  id: string;
-  season_id: string;
-  date: string;
-  home_team: string;
-  away_team: string;
-  home_goals: number | null;
-  away_goals: number | null;
-  result: 'H' | 'A' | 'D' | null;
-  home_odds?: number;
-  draw_odds?: number;
-  away_odds?: number;
-  first_half_home_goals?: number;
-  first_half_away_goals?: number;
-  full_time_result?: 'H' | 'A' | 'D' | null;
-  half_time_result?: 'H' | 'A' | 'D' | null;
-  referee?: string;
-  home_shots?: number;
-  away_shots?: number;
-  home_shots_target?: number;
-  away_shots_target?: number;
-  home_fouls?: number;
-  away_fouls?: number;
-  home_corners?: number;
-  away_corners?: number;
-  home_yellows?: number;
-  away_yellows?: number;
-  home_reds?: number;
-  away_reds?: number;
-  created_at?: string;
-}
-
-export interface Season {
-  id: string;
-  name: string;
-  start_date: string;
-  end_date: string;
-  is_current: boolean;
-  created_at?: string;
-}
+// Re-export types from types/index.ts for consistency
+export type { Match };
+export type Season = BaseSeason;
 
 export interface TeamStats {
   team: string;
@@ -175,9 +138,27 @@ function getDemoMatches(): Match[] {
       home_goals: 3,
       away_goals: 2,
       result: 'H',
+      home_odds: 1.8,
+      draw_odds: 3.5,
+      away_odds: 4.2,
+      first_half_home_goals: 2,
+      first_half_away_goals: 1,
+      full_time_result: 'H',
+      half_time_result: 'H',
+      referee: 'Michael Oliver',
+      home_shots: 18,
+      away_shots: 14,
       home_shots_target: 8,
       away_shots_target: 6,
-      referee: 'Michael Oliver'
+      home_fouls: 12,
+      away_fouls: 14,
+      home_corners: 7,
+      away_corners: 5,
+      home_yellows: 2,
+      away_yellows: 3,
+      home_reds: 0,
+      away_reds: 0,
+      created_at: '2024-03-15T15:00:00Z'
     },
     {
       id: '2',
@@ -188,9 +169,27 @@ function getDemoMatches(): Match[] {
       home_goals: 2,
       away_goals: 2,
       result: 'D',
+      home_odds: 2.1,
+      draw_odds: 3.3,
+      away_odds: 3.5,
+      first_half_home_goals: 1,
+      first_half_away_goals: 0,
+      full_time_result: 'D',
+      half_time_result: 'H',
+      referee: 'Anthony Taylor',
+      home_shots: 15,
+      away_shots: 12,
       home_shots_target: 7,
       away_shots_target: 5,
-      referee: 'Anthony Taylor'
+      home_fouls: 10,
+      away_fouls: 13,
+      home_corners: 6,
+      away_corners: 4,
+      home_yellows: 1,
+      away_yellows: 2,
+      home_reds: 0,
+      away_reds: 0,
+      created_at: '2024-03-14T19:30:00Z'
     },
     {
       id: '3',
@@ -201,9 +200,27 @@ function getDemoMatches(): Match[] {
       home_goals: 1,
       away_goals: 4,
       result: 'A',
+      home_odds: 2.3,
+      draw_odds: 3.4,
+      away_odds: 2.9,
+      first_half_home_goals: 0,
+      first_half_away_goals: 2,
+      full_time_result: 'A',
+      half_time_result: 'A',
+      referee: 'Paul Tierney',
+      home_shots: 8,
+      away_shots: 19,
       home_shots_target: 3,
       away_shots_target: 9,
-      referee: 'Paul Tierney'
+      home_fouls: 15,
+      away_fouls: 9,
+      home_corners: 3,
+      away_corners: 8,
+      home_yellows: 3,
+      away_yellows: 1,
+      home_reds: 0,
+      away_reds: 0,
+      created_at: '2024-03-13T20:00:00Z'
     }
   ];
 }
@@ -215,7 +232,8 @@ function getDemoSeasons(): Season[] {
       name: '2023/2024',
       start_date: '2023-08-11',
       end_date: '2024-05-19',
-      is_current: true
+      is_current: true,
+      created_at: '2023-06-01T00:00:00Z'
     }
   ];
 }
@@ -256,6 +274,27 @@ function getDemoUnusualMatches(): UnusualMatch[] {
       home_goals: 1,
       away_goals: 4,
       result: 'A',
+      home_odds: 2.3,
+      draw_odds: 3.4,
+      away_odds: 2.9,
+      first_half_home_goals: 0,
+      first_half_away_goals: 2,
+      full_time_result: 'A',
+      half_time_result: 'A',
+      referee: 'Paul Tierney',
+      home_shots: 8,
+      away_shots: 19,
+      home_shots_target: 3,
+      away_shots_target: 9,
+      home_fouls: 15,
+      away_fouls: 9,
+      home_corners: 3,
+      away_corners: 8,
+      home_yellows: 3,
+      away_yellows: 1,
+      home_reds: 0,
+      away_reds: 0,
+      created_at: '2024-03-13T20:00:00Z',
       goal_difference: 3,
       total_goals: 5,
       unusual_type: 'Away Thrashing',

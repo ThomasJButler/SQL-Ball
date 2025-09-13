@@ -18,10 +18,13 @@ export class QueryGenerator {
   private sqlChain: LLMChain;
   private explanationChain: LLMChain;
   private footballTerms: Map<string, string[]>;
+  private apiKey: string;
 
   constructor(apiKey?: string) {
+    const openAIApiKey = apiKey || import.meta.env.VITE_OPENAI_API_KEY || '';
+    this.apiKey = openAIApiKey;
     this.llm = new ChatOpenAI({
-      openAIApiKey: apiKey || import.meta.env.VITE_OPENAI_API_KEY || '',
+      openAIApiKey,
       modelName: 'gpt-4',
       temperature: 0.1, // Low temperature for consistent SQL generation
     });
@@ -141,8 +144,7 @@ Provide a brief explanation (2-3 sentences) that:
         .join('\n');
       
       // 4. Check if we have OpenAI API key for generation
-      const apiKey = this.llm.openAIApiKey;
-      if (!apiKey || apiKey === '') {
+      if (!this.apiKey || this.apiKey === '') {
         console.log('⚠️ No OpenAI API key - using template-based generation');
         return this.generateTemplateBasedQuery(naturalQuery, relevantTables);
       }
