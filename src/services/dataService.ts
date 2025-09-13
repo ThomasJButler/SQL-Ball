@@ -133,12 +133,12 @@ class DataService {
   // Main data fetching methods - API only
   public async getCurrentSeason(): Promise<Season | null> {
     const cacheKey = 'current_season';
-    
+
     // Try cache first
     const cached = await this.getCachedData<Season>('teamStats', cacheKey);
     if (cached) return cached;
-    
-    // Get from API
+
+    // Try API first
     if (this.apiSource.available) {
       try {
         const season = await footballDataAPI.getCurrentSeason();
@@ -150,8 +150,26 @@ class DataService {
         console.error('Error fetching season from API:', error);
       }
     }
-    
-    throw new Error('No data source available for current season');
+
+    // Fall back to Supabase
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data, error } = await supabase
+        .from('seasons')
+        .select('*')
+        .eq('is_current', true)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        await this.setCachedData('teamStats', cacheKey, data);
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching season from database:', error);
+    }
+
+    return null;
   }
   
   public async getMatches(options: {
@@ -221,11 +239,11 @@ class DataService {
   
   public async getStandings(): Promise<Standing[]> {
     const cacheKey = 'current_standings';
-    
+
     // Try cache first
     const cached = await this.getCachedData<Standing[]>('standings', cacheKey);
     if (cached) return cached;
-    
+
     // Get from API
     if (this.apiSource.available) {
       try {
@@ -238,17 +256,18 @@ class DataService {
         console.error('Error fetching standings from API:', error);
       }
     }
-    
-    throw new Error('No data source available for standings');
+
+    // No fallback for standings - return empty array
+    return [];
   }
   
   public async getTeamStats(teamName: string): Promise<TeamStats | null> {
     const cacheKey = `team_stats_${teamName}`;
-    
+
     // Try cache first
     const cached = await this.getCachedData<TeamStats>('teamStats', cacheKey);
     if (cached) return cached;
-    
+
     // Get from API
     if (this.apiSource.available) {
       try {
@@ -282,7 +301,7 @@ class DataService {
             away_goals_against: 0,
             updated_at: new Date().toISOString()
           };
-          
+
           await this.setCachedData('teamStats', cacheKey, stats);
           return stats;
         }
@@ -290,7 +309,25 @@ class DataService {
         console.error('Error fetching team stats from API:', error);
       }
     }
-    
+
+    // Fall back to Supabase
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data, error } = await supabase
+        .from('team_stats')
+        .select('*')
+        .eq('team_name', teamName)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        await this.setCachedData('teamStats', cacheKey, data);
+        return data;
+      }
+    } catch (error) {
+      console.error('Error fetching team stats from database:', error);
+    }
+
     return null;
   }
   
@@ -343,6 +380,86 @@ class DataService {
     return [];
   }
 
+  // Get head to head statistics
+  public async getHeadToHead(homeTeam: string, awayTeam: string): Promise<{
+    homeWins: number;
+    draws: number;
+    awayWins: number;
+    matches: Match[];
+  }> {
+    const cacheKey = `h2h_${homeTeam}_${awayTeam}`;
+
+    // Try cache first
+    const cached = await this.getCachedData<any>('matches', cacheKey);
+    if (cached) return cached;
+
+    // Get from API
+    if (this.apiSource.available) {
+      try {
+        const h2h = await footballDataAPI.getHeadToHead(homeTeam, awayTeam);
+        if (h2h) {
+          await this.setCachedData('matches', cacheKey, h2h);
+          return h2h;
+        }
+      } catch (error) {
+        console.error('Error fetching head to head from API:', error);
+      }
+    }
+
+    // Fall back to Supabase
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data: matches, error } = await supabase
+        .from('matches')
+        .select('*')
+        .or(`home_team.eq.${homeTeam},away_team.eq.${homeTeam}`)
+        .or(`home_team.eq.${awayTeam},away_team.eq.${awayTeam}`)
+        .order('date', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      let homeWins = 0;
+      let draws = 0;
+      let awayWins = 0;
+
+      const h2hMatches = matches?.filter(match =>
+        (match.home_team === homeTeam && match.away_team === awayTeam) ||
+        (match.home_team === awayTeam && match.away_team === homeTeam)
+      ) || [];
+
+      h2hMatches.forEach(match => {
+        if (match.home_team === homeTeam) {
+          if (match.result === 'H') homeWins++;
+          else if (match.result === 'D') draws++;
+          else if (match.result === 'A') awayWins++;
+        } else {
+          if (match.result === 'H') awayWins++;
+          else if (match.result === 'D') draws++;
+          else if (match.result === 'A') homeWins++;
+        }
+      });
+
+      const result = {
+        homeWins,
+        draws,
+        awayWins,
+        matches: h2hMatches
+      };
+
+      await this.setCachedData('matches', cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error('Error fetching head to head from database:', error);
+      return {
+        homeWins: 0,
+        draws: 0,
+        awayWins: 0,
+        matches: []
+      };
+    }
+  }
+
   // Get matches by season
   public async getMatchesBySeason(seasonId: string): Promise<Match[]> {
     // For now, just return all matches since we only have current season
@@ -353,6 +470,19 @@ class DataService {
   public setDataSource(source: 'api'): void {
     // Currently only API source is supported
     console.log(`Data source set to: ${source}`);
+  }
+
+  // Get current data source status
+  public getStatus(): {
+    primarySource: DataSource;
+    fallbackSource: { type: string; available: boolean };
+    cacheEnabled: boolean;
+  } {
+    return {
+      primarySource: this.apiSource,
+      fallbackSource: { type: 'database', available: true },
+      cacheEnabled: this.useCache
+    };
   }
 
   // Refresh data source availability (useful after API key is set)

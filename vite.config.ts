@@ -4,6 +4,19 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [svelte()],
+  optimizeDeps: {
+    exclude: ['chromadb', 'chromadb-default-embed']
+  },
+  build: {
+    rollupOptions: {
+      external: ['@chroma-core/default-embed'],
+      output: {
+        globals: {
+          '@chroma-core/default-embed': 'ChromaDefaultEmbed'
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api/football-data': {
