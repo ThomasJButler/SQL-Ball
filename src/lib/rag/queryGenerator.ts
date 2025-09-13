@@ -21,7 +21,9 @@ export class QueryGenerator {
   private apiKey: string;
 
   constructor(apiKey?: string) {
-    const openAIApiKey = apiKey || import.meta.env.VITE_OPENAI_API_KEY || '';
+    // Try localStorage first, then env variable, then passed parameter
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') : null;
+    const openAIApiKey = storedKey || apiKey || import.meta.env.VITE_OPENAI_API_KEY || '';
     this.apiKey = openAIApiKey;
     this.llm = new ChatOpenAI({
       openAIApiKey,

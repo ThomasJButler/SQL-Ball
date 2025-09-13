@@ -11,6 +11,7 @@
   import SeasonStats from './components/SeasonStats.svelte';
   import Settings from './components/Settings.svelte';
   import ApiSetupWizard from './components/ApiSetupWizard.svelte';
+  import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
   import Help from './components/Help.svelte';
   import TopScorers from './components/TopScorers.svelte';
   import LiveMatches from './components/LiveMatches.svelte';
@@ -22,7 +23,9 @@
   let isSidebarOpen = false; // Start with sidebar closed
   let isTransitioning = false;
   let showApiSetup = false;
+  let showOpenAISetup = false;
   let hasApiKey = false;
+  let hasOpenAIKey = false;
   let dashboardComponent: Dashboard;
   
   function navigate(event: CustomEvent<{ view: string }>) {
@@ -47,7 +50,15 @@
       isSidebarOpen = true;
     }
     
-    // Check for API key on load
+    // Check for API keys on load
+    const openaiKey = localStorage.getItem('openai_api_key');
+    if (!openaiKey) {
+      showOpenAISetup = true;
+    } else {
+      hasOpenAIKey = true;
+    }
+
+    // Check for Football-Data API key
     checkApiKey();
   });
 
@@ -150,7 +161,20 @@
   
   <!-- Mobile Navigation -->
   <MobileNav {currentView} on:navigate={navigate} />
-  
+
+  <!-- OpenAI Setup Wizard -->
+  {#if showOpenAISetup}
+    <OpenAISetupWizard
+      on:complete={() => {
+        showOpenAISetup = false;
+        hasOpenAIKey = true;
+      }}
+      on:skip={() => {
+        showOpenAISetup = false;
+      }}
+    />
+  {/if}
+
   <!-- Floating Action Buttons -->
   <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
     <!-- Query Builder FAB -->

@@ -20,6 +20,7 @@
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { TrendingUp, Users, Target, BarChart2 } from 'lucide-svelte';
+  import EnhancedVisualizations from './EnhancedVisualizations.svelte';
   ChartJS.register(
     Title,
     Tooltip,
@@ -431,6 +432,15 @@
       </ul>
       <button class="btn btn-secondary btn-sm mt-4 w-full">View All Matches</button>
     </div>
+  </div>
+
+  <!-- Enhanced Visualizations Section -->
+  <div class="animate-slide-in-up" style="animation-delay: 1000ms">
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
+      <BarChart2 class="w-8 h-8 text-green-500" />
+      Advanced Match Analytics
+    </h2>
+    <EnhancedVisualizations matches={recentMatches} />
   </div>
 </div>
 
