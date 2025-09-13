@@ -112,17 +112,19 @@
       {#each steps as step}
         <button
           on:click={() => goToStep(step.id)}
-          class="flex items-center gap-2 transition-all"
-          class:opacity-50={step.id > currentStep}
-          class:cursor-not-allowed={step.id > currentStep + 1}
+          class="flex items-center gap-2 transition-all {
+            step.id > currentStep ? 'opacity-50' : ''
+          } {
+            step.id > currentStep + 1 ? 'cursor-not-allowed' : ''
+          }"
           disabled={step.id > currentStep + 1}
         >
           <div
-            class="w-10 h-10 rounded-full flex items-center justify-center transition-all"
-            class:bg-green-500={step.id <= currentStep}
-            class:bg-slate-700={step.id > currentStep}
-            class:shadow-lg={step.id === currentStep}
-            class:shadow-green-500/50={step.id === currentStep}
+            class="w-10 h-10 rounded-full flex items-center justify-center transition-all {
+              step.id <= currentStep ? 'bg-green-500' : 'bg-slate-700'
+            } {
+              step.id === currentStep ? 'shadow-lg shadow-green-500/50' : ''
+            }"
           >
             {#if step.id < currentStep}
               <Check class="w-5 h-5 text-white" />
@@ -131,19 +133,19 @@
             {/if}
           </div>
           <span
-            class="hidden sm:block text-sm font-medium transition-colors"
-            class:text-green-400={step.id === currentStep}
-            class:text-white={step.id < currentStep}
-            class:text-slate-500={step.id > currentStep}
+            class="hidden sm:block text-sm font-medium transition-colors {
+              step.id === currentStep ? 'text-green-400' :
+              step.id < currentStep ? 'text-white' : 'text-slate-500'
+            }"
           >
             {step.title}
           </span>
         </button>
         {#if step.id < steps.length}
           <div
-            class="flex-1 h-0.5 mx-2 transition-colors"
-            class:bg-green-500={step.id < currentStep}
-            class:bg-slate-700={step.id >= currentStep}
+            class="flex-1 h-0.5 mx-2 transition-colors {
+              step.id < currentStep ? 'bg-green-500' : 'bg-slate-700'
+            }"
           />
         {/if}
       {/each}
@@ -254,9 +256,10 @@
                     id="apiKey"
                     bind:value={apiKey}
                     placeholder="sk-..."
-                    class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
-                    class:border-red-500={validationError}
-                    class:border-green-500={validationSuccess}
+                    class="w-full px-4 py-3 bg-slate-900 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all {
+                      validationError ? 'border-red-500' :
+                      validationSuccess ? 'border-green-500' : 'border-slate-700'
+                    }"
                   />
                   {#if validationSuccess}
                     <Check class="absolute right-3 top-3.5 w-5 h-5 text-green-400" />
