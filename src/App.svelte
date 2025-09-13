@@ -4,13 +4,9 @@
   import MobileNav from './components/MobileNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
   import MatchList from './components/MatchList.svelte';
-  import Predictions from './components/Predictions.svelte';
-  import BettingHistory from './components/BettingHistory.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
   import LiveTicker from './components/LiveTicker.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
-  import KellyCalculator from './components/betting/KellyCalculator.svelte';
-  import ValueBets from './components/betting/ValueBets.svelte';
   import Settings from './components/Settings.svelte';
   import ApiSetupWizard from './components/ApiSetupWizard.svelte';
   import Help from './components/Help.svelte';
@@ -123,14 +119,21 @@
           <Dashboard bind:this={dashboardComponent} />
         {:else if currentView === 'Matches'}
           <MatchList />
-        {:else if currentView === 'Predictions'}
-          <Predictions />
-        {:else if currentView === 'Kelly Calculator'}
-          <KellyCalculator />
-        {:else if currentView === 'Value Bets'}
-          <ValueBets />
-        {:else if currentView === 'Betting History'}
-          <BettingHistory />
+        {:else if currentView === 'Query Builder'}
+          <div class="text-center py-12">
+            <h2 class="text-2xl font-bold mb-4">Query Builder - Coming Soon</h2>
+            <p>Natural language to SQL conversion</p>
+          </div>
+        {:else if currentView === 'Pattern Discovery'}
+          <div class="text-center py-12">
+            <h2 class="text-2xl font-bold mb-4">Pattern Discovery - Coming Soon</h2>
+            <p>Discover unusual statistics and anomalies</p>
+          </div>
+        {:else if currentView === 'SQL Explorer'}
+          <div class="text-center py-12">
+            <h2 class="text-2xl font-bold mb-4">SQL Explorer - Coming Soon</h2>
+            <p>Interactive database schema browser</p>
+          </div>
         {:else if currentView === 'AI Assistant'}
           <AiAssistant />
         {:else if currentView === 'Season Stats'}
@@ -155,14 +158,14 @@
   
   <!-- Floating Action Buttons -->
   <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-    <!-- Quick Prediction FAB -->
+    <!-- Query Builder FAB -->
     <button 
       class="fab-button group"
-      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'Predictions'}}))}
-      aria-label="Quick Predictions"
+      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'Query Builder'}}))}
+      aria-label="Query Builder"
     >
-      <div class="fab-icon">⚡</div>
-      <div class="fab-tooltip">Quick Predictions</div>
+      <div class="fab-icon">🔍</div>
+      <div class="fab-tooltip">Query Builder</div>
     </button>
     
     <!-- AI Assistant FAB -->
