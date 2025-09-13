@@ -51,7 +51,10 @@
     }
     
     // Check for API keys on load
-    const openaiKey = localStorage.getItem('openai_api_key');
+    const envOpenAIKey = import.meta.env.VITE_OPENAI_API_KEY;
+    const storedOpenAIKey = localStorage.getItem('openai_api_key');
+    const openaiKey = envOpenAIKey || storedOpenAIKey;
+
     if (!openaiKey) {
       showOpenAISetup = true;
     } else {

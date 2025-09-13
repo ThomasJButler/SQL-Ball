@@ -9,28 +9,38 @@
   let queryResult: QueryResult | null = null;
   let executionResult: any[] = [];
   let error: string | null = null;
-  let queryGenerator: QueryGenerator;
+  let queryGenerator: QueryGenerator | null = null;
+  let hasOpenAIKey = false;
   let showExamples = false;
 
-  // SQL examples since we're in SQL-only mode for now
+  // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "SELECT * FROM matches LIMIT 10",
-    "SELECT * FROM matches WHERE home_goals > 3 LIMIT 10",
-    "SELECT home_team, away_team, home_goals, away_goals FROM matches LIMIT 20",
-    "SELECT * FROM matches ORDER BY date DESC LIMIT 5"
+    "Show me the last 10 matches",
+    "Which team scored the most goals this season?",
+    "Find all matches where the home team won by more than 3 goals",
+    "Show me Liverpool's recent performance",
+    "What were the highest scoring matches?",
+    "Find matches with the most yellow cards"
   ];
 
   onMount(() => {
-    // Only initialize query generator if we have an OpenAI API key
-    const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
+    // Check for OpenAI API key from environment or localStorage
+    const envKey = import.meta.env.VITE_OPENAI_API_KEY;
+    const storedKey = localStorage.getItem('openai_api_key');
+    const openAIKey = envKey || storedKey;
+
     if (openAIKey && openAIKey !== '') {
       try {
         queryGenerator = new QueryGenerator(openAIKey);
+        hasOpenAIKey = true;
+        console.log('✅ AI-powered query system ready');
       } catch (err) {
-        console.warn('QueryGenerator initialization failed, will use SQL-only mode', err);
+        console.error('Failed to initialize AI query system:', err);
+        error = 'Failed to initialize AI system. Please check your OpenAI API key.';
       }
     } else {
-      console.log('📝 SQL-only mode: No OpenAI API key found. You can still write SQL queries directly.');
+      error = 'OpenAI API key required. Please add it to your .env file or use the setup wizard.';
+      console.error('❌ No OpenAI API key found. The app requires an API key to function.');
     }
   });
 
@@ -43,19 +53,16 @@
     executionResult = [];
 
     try {
-      // Check if we have a query generator (requires OpenAI API key)
+      // Require OpenAI API key for all functionality
       if (!queryGenerator) {
-        // Fallback to basic SQL mode
-        queryResult = {
-          sql: naturalQuery, // Assume user entered SQL directly
-          explanation: 'Direct SQL query execution (RAG mode requires OpenAI API key)',
-          confidence: 1,
-          tables: []
-        };
-      } else {
-        // Generate SQL from natural language
-        queryResult = await queryGenerator.generateQuery(naturalQuery);
+        error = 'OpenAI API key is required. Please configure it in your .env file.';
+        isLoading = false;
+        return;
       }
+
+      // Use the AI-powered query generator
+      // Generate SQL from natural language
+      queryResult = await queryGenerator.generateQuery(naturalQuery);
       
       // Parse and execute SQL queries
       const sqlLower = queryResult.sql.toLowerCase().trim();
