@@ -49,17 +49,10 @@
     if (window.innerWidth >= 1024) { // Large desktop screens
       isSidebarOpen = true;
     }
-    
-    // Check for API keys on load
-    const envOpenAIKey = import.meta.env.VITE_OPENAI_API_KEY;
-    const storedOpenAIKey = localStorage.getItem('openai_api_key');
-    const openaiKey = envOpenAIKey || storedOpenAIKey;
 
-    if (!openaiKey) {
-      showOpenAISetup = true;
-    } else {
-      hasOpenAIKey = true;
-    }
+    // Skip OpenAI setup - backend handles it now
+    hasOpenAIKey = true;
+    showOpenAISetup = false;
 
     // Check for Football-Data API key
     checkApiKey();
@@ -79,19 +72,9 @@
   async function handleApiSetupComplete(event: CustomEvent<{ apiKey: string }>) {
     hasApiKey = true;
     showApiSetup = false;
-    
-    // Refresh data services with new API key
-    const { dataService } = await import('./services/dataService');
-    const { footballDataAPI } = await import('./services/api/footballData');
-    
-    // Set the API key in the Football Data API
-    footballDataAPI.setApiKey(event.detail.apiKey);
-    
-    // Refresh data source availability
-    await dataService.refreshDataSources();
-    
-    console.log('✅ API key setup completed successfully');
-    
+
+    console.log('✅ API key setup completed (deprecated - using Supabase)');
+
     // Refresh dashboard if it's currently loaded
     if (currentView === 'Dashboard' && dashboardComponent) {
       setTimeout(() => {

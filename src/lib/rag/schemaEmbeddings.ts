@@ -105,8 +105,14 @@ export class SchemaEmbeddings {
     const storedKey = typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') : null;
     const openAIApiKey = storedKey || apiKey || import.meta.env.VITE_OPENAI_API_KEY || '';
     this.apiKey = openAIApiKey;
+
+    // Set the environment variable for the OpenAI client
+    if (typeof process !== 'undefined' && openAIApiKey) {
+      process.env.OPENAI_API_KEY = openAIApiKey;
+    }
+
     this.embeddings = new OpenAIEmbeddings({
-      openAIApiKey,
+      apiKey: openAIApiKey, // Use 'apiKey' instead of 'openAIApiKey'
       modelName: 'text-embedding-3-small' // Updated model
     });
   }

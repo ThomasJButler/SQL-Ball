@@ -1,0 +1,12 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+langchain==0.1.0
+langchain-openai==0.0.2
+chromadb==0.4.22
+supabase==2.3.0
+python-dotenv==1.0.0
+pydantic==2.5.3
+pandas==2.1.4
+numpy==1.26.2
+python-multipart==0.0.6
+cors==1.0.1

@@ -1,70 +1,83 @@
 <script lang="ts">
-  import { Search, Sparkles, Database, Zap, Info } from 'lucide-svelte';
+  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu } from 'lucide-svelte';
   import { onMount } from 'svelte';
-  import { QueryGenerator, type QueryResult } from '../lib/rag/queryGenerator';
+  import { ragService, type QueryResponse } from '../services/ragService';
   import { supabase } from '../lib/supabase';
 
   let naturalQuery = '';
   let isLoading = false;
-  let queryResult: QueryResult | null = null;
+  let queryResult: QueryResponse | null = null;
   let executionResult: any[] = [];
   let error: string | null = null;
-  let queryGenerator: QueryGenerator | null = null;
-  let hasOpenAIKey = false;
+  let backendHealthy = false;
   let showExamples = false;
+  let selectedSeason = '2024-2025';
+  let showOptimizations = false;
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "Show me the last 10 matches",
-    "Which team scored the most goals this season?",
-    "Find all matches where the home team won by more than 3 goals",
-    "Show me Liverpool's recent performance",
-    "What were the highest scoring matches?",
-    "Find matches with the most yellow cards"
+    "Show me the top 5 scorers",
+    "Which teams have the best home record?",
+    "Find all strikers with more than 10 goals",
+    "Show me Arsenal's recent matches",
+    "Who has the most assists this season?",
+    "List the clean sheets by goalkeepers",
+    "Show matches with highest expected goals",
+    "Find players from Manchester clubs"
   ];
 
-  onMount(() => {
-    // Check for OpenAI API key from environment or localStorage
-    const envKey = import.meta.env.VITE_OPENAI_API_KEY;
-    const storedKey = localStorage.getItem('openai_api_key');
-    const openAIKey = envKey || storedKey;
-
-    if (openAIKey && openAIKey !== '') {
-      try {
-        queryGenerator = new QueryGenerator(openAIKey);
-        hasOpenAIKey = true;
-        console.log('✅ AI-powered query system ready');
-      } catch (err) {
-        console.error('Failed to initialize AI query system:', err);
-        error = 'Failed to initialize AI system. Please check your OpenAI API key.';
+  onMount(async () => {
+    // Check backend health
+    try {
+      backendHealthy = await ragService.checkHealth();
+      if (backendHealthy) {
+        console.log('✅ SQL-Ball RAG backend connected');
+        // Load example queries
+        const examples = await ragService.getExamples();
+        console.log('Loaded examples:', examples);
+      } else {
+        error = 'Backend not ready. Please ensure the FastAPI server is running on port 8000.';
       }
-    } else {
-      error = 'OpenAI API key required. Please add it to your .env file or use the setup wizard.';
-      console.error('❌ No OpenAI API key found. The app requires an API key to function.');
+    } catch (err) {
+      console.error('Failed to connect to backend:', err);
+      error = 'Cannot connect to backend. Run: cd backend && uvicorn main:app --reload';
     }
   });
 
   async function handleSubmit() {
-    if (!naturalQuery.trim()) return;
-    
+    if (!naturalQuery.trim() || !backendHealthy) return;
+
     isLoading = true;
     error = null;
     queryResult = null;
     executionResult = [];
+    showOptimizations = false;
 
     try {
-      // Require OpenAI API key for all functionality
-      if (!queryGenerator) {
-        error = 'OpenAI API key is required. Please configure it in your .env file.';
-        isLoading = false;
-        return;
+      // Process query through RAG backend
+      const response = await ragService.processQuery({
+        question: naturalQuery,
+        season: selectedSeason,
+        include_explanation: true,
+        limit: 20
+      });
+
+      // Store the response
+      queryResult = {
+        sql: response.sql,
+        explanation: response.explanation || 'Query processed successfully',
+        confidence: 0.95, // Default confidence
+        optimizationSuggestions: response.optimizations || [],
+        performanceEstimate: response.execution_time_ms ? `${response.execution_time_ms}ms` : 'Fast'
+      };
+
+      // If backend returns results directly, use them
+      if (response.results && Array.isArray(response.results)) {
+        executionResult = response.results;
+        return; // Skip local execution
       }
 
-      // Use the AI-powered query generator
-      // Generate SQL from natural language
-      queryResult = await queryGenerator.generateQuery(naturalQuery);
-      
-      // Parse and execute SQL queries
+      // Otherwise parse and execute SQL locally
       const sqlLower = queryResult.sql.toLowerCase().trim();
       
       if (!sqlLower.startsWith('select')) {

@@ -5,14 +5,22 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 export default defineConfig({
   plugins: [svelte()],
   optimizeDeps: {
-    exclude: ['chromadb', 'chromadb-default-embed']
+    include: ['chromadb']
+  },
+  define: {
+    'process.env': {}
+  },
+  resolve: {
+    alias: {
+      // Polyfill for ChromaDB default embeddings
+      '@chroma-core/default-embed': new URL('./src/lib/rag/chromaPolyfill.ts', import.meta.url).pathname
+    }
   },
   build: {
     rollupOptions: {
-      external: ['@chroma-core/default-embed'],
       output: {
-        globals: {
-          '@chroma-core/default-embed': 'ChromaDefaultEmbed'
+        manualChunks: {
+          'chromadb': ['chromadb']
         }
       }
     }

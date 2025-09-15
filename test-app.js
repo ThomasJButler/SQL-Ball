@@ -65,10 +65,10 @@ async function checkDevServer() {
 
   try {
     const fetch = (await import('node-fetch')).default;
-    const response = await fetch('http://localhost:3000');
+    const response = await fetch('http://localhost:5173');
 
     if (response.ok) {
-      log.success('Dev server is running on port 3000');
+      log.success('Dev server is running on port 5173');
       return true;
     } else {
       log.error(`Dev server responded with status: ${response.status}`);
