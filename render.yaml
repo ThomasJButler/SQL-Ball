@@ -9,8 +9,6 @@ services:
     branch: main
     healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: PORT
         generateValue: true
       - key: OPENAI_API_KEY
