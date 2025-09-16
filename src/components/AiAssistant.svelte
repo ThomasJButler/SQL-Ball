@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Send, Bot, Key, AlertCircle } from 'lucide-svelte';
+  import { Send, Bot, Key, AlertCircle, Sparkles } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { createEventDispatcher } from 'svelte';
@@ -16,7 +16,7 @@
   let messages: Message[] = [
     {
       id: 1,
-      text: "Hello! I'm your SQL-Ball AI assistant powered by OpenAI. I can help you analyze football data, generate SQL queries, discover patterns, and provide insights about teams and players. How can I assist you today?",
+      text: "Hello! I'm your SQL-Ball AI assistant powered by OpenAI. I can help you analyze European football data from 22 leagues across 11 countries with 7,681+ matches. I can generate SQL queries, discover patterns, and provide insights about teams, leagues, and match statistics. How can I assist you today?",
       sender: 'assistant',
       timestamp: new Date()
     }
@@ -111,21 +111,31 @@
           messages: [
             {
               role: 'system',
-              content: `You are SQL-Ball AI Assistant, an expert in football data analytics and SQL query generation.
+              content: `You are SQL-Ball AI Assistant, an expert in European football data analytics and SQL query generation.
 
-You have access to a PostgreSQL database with the following tables:
-- seasons: Premier League seasons data
-- matches: Detailed match data including scores, statistics, and xG data
-- player_stats: Individual player statistics by season
+You have access to a PostgreSQL database with comprehensive European league data:
+- **leagues**: 22 European leagues across 11 countries (Premier League, La Liga, Serie A, Bundesliga, Ligue 1, etc.)
+- **teams**: 397+ teams from all major European competitions
+- **matches**: 7,681+ detailed match records with scores, statistics, cards, corners, shots, fouls, referee data
+- **seasons**: 2024-2025 season data
+
+Key database fields:
+- match_date, home_team, away_team, home_score, away_score
+- div (league code), season, result (H/A/D)
+- home_shots_target, away_shots_target, home_corners, away_corners
+- home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
+- home_fouls, away_fouls, referee
+- ht_result (half-time result), ht_home_score, ht_away_score
 
 Help users by:
-1. Generating SQL queries for their data requests
-2. Explaining football statistics and patterns
-3. Analyzing historical match data
-4. Providing insights about teams and players
-5. Suggesting interesting queries they could run
+1. Generating SQL queries for European football data requests
+2. Analyzing patterns across multiple leagues and countries
+3. Comparing team performance across different competitions
+4. Finding interesting statistics and anomalies
+5. Providing insights about European football trends
+6. Suggesting fascinating queries about upsets, goal-fests, and patterns
 
-Always provide clean, optimized SQL queries that can be run directly in the Query Builder.`
+Always provide clean, optimized SQL queries that work with these field names and can be run directly in the Query Builder. Focus on the rich European dataset with 22 leagues.`
             },
             ...conversationHistory,
             { role: 'user', content: userInput }
@@ -206,7 +216,7 @@ Always provide clean, optimized SQL queries that can be run directly in the Quer
         <div>
           <h2 class="text-lg font-bold text-slate-900 dark:text-white">AI Assistant</h2>
           <p class="text-sm text-slate-600 dark:text-slate-400">
-            {hasApiKey ? 'OpenAI GPT-4 Turbo' : 'Configure API key to enable'}
+            {hasApiKey ? 'GPT-4 • 22 European Leagues • 7,681+ Matches' : 'Configure API key to enable'}
           </p>
         </div>
       </div>
@@ -290,7 +300,7 @@ Always provide clean, optimized SQL queries that can be run directly in the Quer
       <textarea
         bind:value={inputMessage}
         on:keydown={handleKeydown}
-        placeholder="Ask about teams, matches, or predictions..."
+        placeholder="Ask about European teams, leagues, matches, or patterns..."
         class="flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[3rem] max-h-[8rem]"
         rows="1"
       />

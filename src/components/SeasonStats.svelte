@@ -16,27 +16,25 @@
 
   interface Match {
     id: number;
-    season_id: string;
-    date: string;
+    season: string;
+    match_date: string;
     home_team: string;
     away_team: string;
     home_score: number | null;
     away_score: number | null;
-    home_xg: number | null;
-    away_xg: number | null;
+    div: string;
     home_shots: number | null;
     away_shots: number | null;
-    home_shots_on_target: number | null;
-    away_shots_on_target: number | null;
-    home_possession: number | null;
-    away_possession: number | null;
+    home_shots_target: number | null;
+    away_shots_target: number | null;
+    result: string | null;
   }
 
   let loading = true;
   let matches: Match[] = [];
   let stats: SeasonStat[] = [];
   let teamStats: { team: string; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; points: number }[] = [];
-  let selectedSeason = '2024-25';
+  let selectedSeason = '2024-2025';
 
   const animatedValue = tweened(0, {
     duration: 1000,
@@ -51,9 +49,9 @@
       const { data, error } = await supabase
         .from('matches')
         .select('*')
-        .eq('season_id', selectedSeason)
+        .eq('season', selectedSeason)
         .not('home_score', 'is', null)
-        .order('date', { ascending: false });
+        .order('match_date', { ascending: false });
 
       if (error) throw error;
 
@@ -144,13 +142,13 @@
       }
     });
 
-    // Calculate average xG
-    const totalXG = completedMatches.reduce((sum, m) => sum + (m.home_xg || 0) + (m.away_xg || 0), 0);
-    const avgXGPerMatch = completedMatches.length > 0 ? (totalXG / completedMatches.length).toFixed(2) : 0;
-
-    // Calculate average shots
+    // Calculate average shots (European league data)
     const totalShots = completedMatches.reduce((sum, m) => sum + (m.home_shots || 0) + (m.away_shots || 0), 0);
     const avgShotsPerMatch = completedMatches.length > 0 ? (totalShots / completedMatches.length).toFixed(1) : 0;
+
+    // Calculate shots on target
+    const totalShotsOnTarget = completedMatches.reduce((sum, m) => sum + (m.home_shots_target || 0) + (m.away_shots_target || 0), 0);
+    const avgShotsOnTargetPerMatch = completedMatches.length > 0 ? (totalShotsOnTarget / completedMatches.length).toFixed(1) : 0;
 
     // Calculate over 2.5 goals percentage
     const over25Goals = completedMatches.filter(m => (m.home_score || 0) + (m.away_score || 0) > 2.5).length;
@@ -168,7 +166,7 @@
         value: completedMatches.length,
         icon: Trophy,
         color: 'from-purple-500 to-indigo-500',
-        description: 'Matches played in 2024-25',
+        description: 'European matches played in 2024-25',
         category: 'Overview'
       },
       {
@@ -228,19 +226,19 @@
         category: 'Betting'
       },
       {
-        label: 'Avg xG/Match',
-        value: avgXGPerMatch,
-        icon: BarChart3,
-        color: 'from-amber-500 to-yellow-500',
-        description: 'Expected goals per game',
-        category: 'Analytics'
-      },
-      {
         label: 'Avg Shots',
         value: avgShotsPerMatch,
         icon: Activity,
         color: 'from-emerald-500 to-green-500',
-        description: 'Shots per match',
+        description: 'Total shots per match',
+        category: 'Analytics'
+      },
+      {
+        label: 'Avg Shots on Target',
+        value: avgShotsOnTargetPerMatch,
+        icon: BarChart3,
+        color: 'from-amber-500 to-yellow-500',
+        description: 'Shots on target per match',
         category: 'Analytics'
       }
     ];
@@ -258,7 +256,7 @@
       <div>
         <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Season Statistics</h1>
         <p class="text-slate-600 dark:text-slate-400">
-          Comprehensive analysis of the {selectedSeason} Premier League season
+          Comprehensive analysis of {selectedSeason} European football season across 22 leagues
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -268,8 +266,7 @@
           on:change={loadSeasonStats}
           class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
         >
-          <option value="2024-25">2024-25</option>
-          <option value="2025-26">2025-26</option>
+          <option value="2024-2025">2024-25 European Season</option>
         </select>
       </div>
     </div>
