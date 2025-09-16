@@ -1,8 +1,8 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-langchain==0.1.17
-langchain-openai==0.1.8
-langchain-community==0.0.38
+langchain==0.2.16
+langchain-openai==0.1.25
+langchain-community==0.2.17
 chromadb==0.4.24
 python-dotenv==1.0.0
 pydantic==2.5.3
