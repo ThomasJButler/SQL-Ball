@@ -24,8 +24,8 @@ export interface UnusualMatch extends Match {
 }
 
 // Initialize Supabase client
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || '';
 
 // Check if we have valid Supabase credentials
 export const hasValidSupabaseConfig = () => {
@@ -39,7 +39,7 @@ export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'http
   : createClient('https://placeholder.supabase.co', 'placeholder-key'); // This will fail gracefully
 
 // Helper functions for database queries
-export async function getRecentMatches(limit: number = 10): Promise<Match[]> {
+export async function getRecentMatches(limit: number = 10, season: string = '2024-2025'): Promise<Match[]> {
   if (!hasValidSupabaseConfig()) {
     // Return demo data when Supabase is not configured
     return getDemoMatches().slice(0, limit);
@@ -48,11 +48,87 @@ export async function getRecentMatches(limit: number = 10): Promise<Match[]> {
   const { data, error } = await supabase
     .from('matches')
     .select('*')
-    .order('date', { ascending: false })
+    .eq('season', season)
+    .order('match_date', { ascending: false })
     .limit(limit);
 
-  if (error) throw error;
-  return data as Match[];
+  if (error) {
+    console.error('Error fetching recent matches:', error);
+    // Fallback to any recent matches if season-specific query fails
+    const { data: fallbackData } = await supabase
+      .from('matches')
+      .select('*')
+      .order('match_date', { ascending: false })
+      .limit(limit);
+    
+    // Map the database fields to our Match type
+    return (fallbackData || []).map(match => ({
+      id: match.id || '',
+      season_id: match.season || '2024-2025',
+      match_date: match.match_date || new Date().toISOString(),
+      div: match.div || 'E0',
+      home_team: match.home_team || `Team ${match.id}`,
+      away_team: match.away_team || `Team ${match.id}`,
+      home_score: match.home_score || 0,
+      away_score: match.away_score || 0,
+      result: match.result || (
+        match.home_score > match.away_score ? 'H' :
+        match.home_score < match.away_score ? 'A' : 'D'
+      ),
+      ht_home_score: match.ht_home_score || 0,
+      ht_away_score: match.ht_away_score || 0,
+      ht_result: match.ht_result || '',
+      referee: match.referee || '',
+      home_shots: match.home_shots || 0,
+      away_shots: match.away_shots || 0,
+      home_shots_target: match.home_shots_target || 0,
+      away_shots_target: match.away_shots_target || 0,
+      home_fouls: match.home_fouls || 0,
+      away_fouls: match.away_fouls || 0,
+      home_corners: match.home_corners || 0,
+      away_corners: match.away_corners || 0,
+      home_yellow_cards: match.home_yellow_cards || 0,
+      away_yellow_cards: match.away_yellow_cards || 0,
+      home_red_cards: match.home_red_cards || 0,
+      away_red_cards: match.away_red_cards || 0,
+      season: match.season || '2024-2025',
+      created_at: match.created_at || match.match_date || new Date().toISOString()
+    })) as Match[];
+  }
+  
+  // Map the database fields to our Match type for successful queries
+  return (data || []).map(match => ({
+    id: match.id || '',
+    season_id: match.season || '2024-2025',
+    match_date: match.match_date || new Date().toISOString(),
+    div: match.div || 'E0',
+    home_team: match.home_team || `Team ${match.id}`,
+    away_team: match.away_team || `Team ${match.id}`,
+    home_score: match.home_score || 0,
+    away_score: match.away_score || 0,
+    result: match.result || (
+      match.home_score > match.away_score ? 'H' :
+      match.home_score < match.away_score ? 'A' : 'D'
+    ),
+    ht_home_score: match.ht_home_score || 0,
+    ht_away_score: match.ht_away_score || 0,
+    ht_result: match.ht_result || '',
+    referee: match.referee || '',
+    home_shots: match.home_shots || 0,
+    away_shots: match.away_shots || 0,
+    home_shots_target: match.home_shots_target || 0,
+    away_shots_target: match.away_shots_target || 0,
+    home_fouls: match.home_fouls || 0,
+    away_fouls: match.away_fouls || 0,
+    home_corners: match.home_corners || 0,
+    away_corners: match.away_corners || 0,
+    home_yellow_cards: match.home_yellow_cards || 0,
+    away_yellow_cards: match.away_yellow_cards || 0,
+    home_red_cards: match.home_red_cards || 0,
+    away_red_cards: match.away_red_cards || 0,
+    season: match.season || '2024-2025',
+    created_at: match.created_at || match.match_date || new Date().toISOString()
+  })) as Match[];
 }
 
 export async function getSeasons(): Promise<Season[]> {
@@ -180,87 +256,171 @@ function getDemoMatches(): Match[] {
   return [
     {
       id: '1',
-      season_id: '2023-24',
-      date: '2024-03-15',
+      match_date: '2024-09-14',
+      div: 'E0',
       home_team: 'Manchester City',
       away_team: 'Liverpool',
       home_score: 3,
-      away_score: 2,
+      away_score: 1,
       result: 'H',
-      first_half_home_goals: 2,
-      first_half_away_goals: 1,
-      full_time_result: 'H',
-      half_time_result: 'H',
+      ht_home_score: 2,
+      ht_away_score: 0,
+      ht_result: 'H',
       referee: 'Michael Oliver',
-      home_shots: 18,
-      away_shots: 14,
-      home_shots_target: 8,
-      away_shots_target: 6,
-      home_fouls: 12,
-      away_fouls: 14,
-      home_corners: 7,
-      away_corners: 5,
-      home_yellows: 2,
-      away_yellows: 3,
-      home_reds: 0,
-      away_reds: 0,
-      created_at: '2024-03-15T15:00:00Z'
+      home_shots: 16,
+      away_shots: 12,
+      home_shots_target: 9,
+      away_shots_target: 4,
+      home_fouls: 8,
+      away_fouls: 11,
+      home_corners: 8,
+      away_corners: 4,
+      home_yellow_cards: 1,
+      away_yellow_cards: 2,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2024-09-14T15:00:00Z'
     },
     {
       id: '2',
-      season_id: '2023-24',
-      date: '2024-03-14',
+      match_date: '2024-09-13',
+      div: 'E0',
       home_team: 'Arsenal',
       away_team: 'Chelsea',
       home_score: 2,
       away_score: 2,
       result: 'D',
-      first_half_home_goals: 1,
-      first_half_away_goals: 0,
-      full_time_result: 'D',
-      half_time_result: 'H',
+      ht_home_score: 1,
+      ht_away_score: 1,
+      ht_result: 'D',
       referee: 'Anthony Taylor',
-      home_shots: 15,
-      away_shots: 12,
-      home_shots_target: 7,
-      away_shots_target: 5,
-      home_fouls: 10,
-      away_fouls: 13,
-      home_corners: 6,
-      away_corners: 4,
-      home_yellows: 1,
-      away_yellows: 2,
-      home_reds: 0,
-      away_reds: 0,
-      created_at: '2024-03-14T19:30:00Z'
+      home_shots: 17,
+      away_shots: 15,
+      home_shots_target: 6,
+      away_shots_target: 7,
+      home_fouls: 9,
+      away_fouls: 12,
+      home_corners: 7,
+      away_corners: 5,
+      home_yellow_cards: 2,
+      away_yellow_cards: 1,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2025-09-13T17:30:00Z'
     },
     {
       id: '3',
-      season_id: '2023-24',
-      date: '2024-03-13',
+      match_date: '2024-09-12',
+      div: 'E0',
       home_team: 'Tottenham',
       away_team: 'Newcastle',
       home_score: 1,
-      away_score: 4,
+      away_score: 3,
       result: 'A',
-      first_half_home_goals: 0,
-      first_half_away_goals: 2,
-      full_time_result: 'A',
-      half_time_result: 'A',
+      ht_home_score: 0,
+      ht_away_score: 2,
+      ht_result: 'A',
       referee: 'Paul Tierney',
-      home_shots: 8,
-      away_shots: 19,
-      home_shots_target: 3,
-      away_shots_target: 9,
-      home_fouls: 15,
-      away_fouls: 9,
-      home_corners: 3,
-      away_corners: 8,
-      home_yellows: 3,
-      away_yellows: 1,
-      home_reds: 0,
-      away_reds: 0,
-      created_at: '2024-03-13T20:00:00Z'
+      home_shots: 11,
+      away_shots: 18,
+      home_shots_target: 4,
+      away_shots_target: 8,
+      home_fouls: 13,
+      away_fouls: 7,
+      home_corners: 5,
+      away_corners: 9,
+      home_yellow_cards: 2,
+      away_yellow_cards: 1,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2025-09-12T20:00:00Z'
+    },
+    {
+      id: '4',
+      match_date: '2024-09-11',
+      div: 'E0',
+      home_team: 'Manchester United',
+      away_team: 'Aston Villa',
+      home_score: 2,
+      away_score: 1,
+      result: 'H',
+      ht_home_score: 1,
+      ht_away_score: 0,
+      ht_result: 'H',
+      referee: 'Simon Hooper',
+      home_shots: 14,
+      away_shots: 10,
+      home_shots_target: 6,
+      away_shots_target: 3,
+      home_fouls: 11,
+      away_fouls: 15,
+      home_corners: 6,
+      away_corners: 3,
+      home_yellow_cards: 1,
+      away_yellow_cards: 3,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2025-09-11T19:45:00Z'
+    },
+    {
+      id: '5',
+      match_date: '2024-09-10',
+      div: 'E0',
+      home_team: 'Brighton',
+      away_team: 'West Ham',
+      home_score: 4,
+      away_score: 0,
+      result: 'H',
+      ht_home_score: 2,
+      ht_away_score: 0,
+      ht_result: 'H',
+      referee: 'Craig Pawson',
+      home_shots: 22,
+      away_shots: 6,
+      home_shots_target: 12,
+      away_shots_target: 2,
+      home_fouls: 7,
+      away_fouls: 14,
+      home_corners: 10,
+      away_corners: 2,
+      home_yellow_cards: 0,
+      away_yellow_cards: 4,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2025-09-10T20:15:00Z'
+    },
+    {
+      id: '6',
+      match_date: '2024-09-09',
+      div: 'E0',
+      home_team: 'Fulham',
+      away_team: 'Brentford',
+      home_score: 1,
+      away_score: 1,
+      result: 'D',
+      ht_home_score: 0,
+      ht_away_score: 1,
+      ht_result: 'A',
+      referee: 'Jarred Gillett',
+      home_shots: 13,
+      away_shots: 9,
+      home_shots_target: 5,
+      away_shots_target: 4,
+      home_fouls: 12,
+      away_fouls: 10,
+      home_corners: 6,
+      away_corners: 4,
+      home_yellow_cards: 2,
+      away_yellow_cards: 2,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      season: '2024-2025',
+      created_at: '2025-09-09T18:30:00Z'
     }
   ];
 }
@@ -268,12 +428,12 @@ function getDemoMatches(): Match[] {
 function getDemoSeasons(): Season[] {
   return [
     {
-      id: '2023-24',
-      name: '2023/2024',
-      start_date: '2023-08-11',
-      end_date: '2024-05-19',
+      id: '2024-25',
+      name: '2025/2026',
+      start_date: '2025-08-16',
+      end_date: '2026-05-24',
       is_current: true,
-      created_at: '2023-06-01T00:00:00Z'
+      created_at: '2025-06-01T00:00:00Z'
     }
   ];
 }
@@ -306,36 +466,64 @@ function getDemoTeamStats(): TeamStats[] {
 function getDemoUnusualMatches(): UnusualMatch[] {
   return [
     {
+      id: '5',
+      season_id: '2024-25',
+      match_date: '2024-09-10',
+      home_team: 'Brighton',
+      away_team: 'West Ham',
+      home_score: 4,
+      away_score: 0,
+      result: 'H',
+      ht_home_score: 2,
+      ht_away_score: 0,
+      referee: 'Craig Pawson',
+      home_shots: 22,
+      away_shots: 6,
+      home_shots_target: 12,
+      away_shots_target: 2,
+      home_fouls: 7,
+      away_fouls: 14,
+      home_corners: 10,
+      away_corners: 2,
+      home_yellow_cards: 0,
+      away_yellow_cards: 4,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      created_at: '2025-09-10T20:15:00Z',
+      goal_difference: 4,
+      total_goals: 4,
+      unusual_type: 'Home Thrashing',
+      season: '2025/2026'
+    },
+    {
       id: '3',
-      season_id: '2023-24',
-      date: '2024-03-13',
+      season_id: '2024-25',
+      match_date: '2024-09-12',
       home_team: 'Tottenham',
       away_team: 'Newcastle',
       home_score: 1,
-      away_score: 4,
+      away_score: 3,
       result: 'A',
-      first_half_home_goals: 0,
-      first_half_away_goals: 2,
-      full_time_result: 'A',
-      half_time_result: 'A',
+      ht_home_score: 0,
+      ht_away_score: 2,
       referee: 'Paul Tierney',
-      home_shots: 8,
-      away_shots: 19,
-      home_shots_target: 3,
-      away_shots_target: 9,
-      home_fouls: 15,
-      away_fouls: 9,
-      home_corners: 3,
-      away_corners: 8,
-      home_yellows: 3,
-      away_yellows: 1,
-      home_reds: 0,
-      away_reds: 0,
-      created_at: '2024-03-13T20:00:00Z',
-      goal_difference: 3,
-      total_goals: 5,
-      unusual_type: 'Away Thrashing',
-      season: '2023/2024'
+      home_shots: 11,
+      away_shots: 18,
+      home_shots_target: 4,
+      away_shots_target: 8,
+      home_fouls: 13,
+      away_fouls: 7,
+      home_corners: 5,
+      away_corners: 9,
+      home_yellow_cards: 2,
+      away_yellow_cards: 1,
+      home_red_cards: 0,
+      away_red_cards: 0,
+      created_at: '2025-09-12T20:00:00Z',
+      goal_difference: 2,
+      total_goals: 4,
+      unusual_type: 'Away Victory',
+      season: '2025/2026'
     }
   ];
 }
