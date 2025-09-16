@@ -43,7 +43,7 @@ export class QueryGenerator {
     // SQL generation prompt
     const sqlPrompt = new PromptTemplate({
       inputVariables: ['naturalQuery', 'schemaContext', 'tables'],
-      template: `You are an expert SQL query generator for Premier League football match data.
+      template: `You are an expert SQL query generator for European football match data covering 22 leagues across 11 countries.
 
 Database Schema Context:
 {schemaContext}
@@ -60,6 +60,8 @@ Generate a PostgreSQL query that answers the user's question. Follow these rules
 4. Use meaningful column aliases
 5. For unusual statistics, consider using CASE statements
 6. Include comments in the SQL to explain complex logic
+7. Remember: match dates are in 'match_date' field, not 'kickoff_time'
+8. Goals are in 'home_score' and 'away_score' fields
 
 Return ONLY the SQL query, no explanation.`
     });
@@ -88,28 +90,29 @@ Provide a brief explanation (2-3 sentences) that:
     const terms = new Map<string, string[]>();
     
     // Goal-related terms
-    terms.set('goals', ['home_goals', 'away_goals']);
-    terms.set('scored', ['home_goals', 'away_goals']);
-    terms.set('scoring', ['home_goals', 'away_goals']);
+    terms.set('goals', ['home_score', 'away_score']);
+    terms.set('scored', ['home_score', 'away_score']);
+    terms.set('scoring', ['home_score', 'away_score']);
     
     // Card-related terms
-    terms.set('cards', ['home_yellows', 'away_yellows', 'home_reds', 'away_reds']);
-    terms.set('yellow cards', ['home_yellows', 'away_yellows']);
-    terms.set('red cards', ['home_reds', 'away_reds']);
-    terms.set('bookings', ['home_yellows', 'away_yellows', 'home_reds', 'away_reds']);
+    terms.set('cards', ['home_yellow_cards', 'away_yellow_cards', 'home_red_cards', 'away_red_cards']);
+    terms.set('yellow cards', ['home_yellow_cards', 'away_yellow_cards']);
+    terms.set('red cards', ['home_red_cards', 'away_red_cards']);
+    terms.set('bookings', ['home_yellow_cards', 'away_yellow_cards', 'home_red_cards', 'away_red_cards']);
     
     // Shot-related terms
     terms.set('shots', ['home_shots', 'away_shots']);
-    terms.set('shots on target', ['home_shots_target', 'away_shots_target']);
+    terms.set('shots on target', ['home_shots_on_target', 'away_shots_on_target']);
     terms.set('shooting', ['home_shots', 'away_shots']);
     
     // Other match statistics
     terms.set('corners', ['home_corners', 'away_corners']);
     terms.set('fouls', ['home_fouls', 'away_fouls']);
+    terms.set('possession', ['home_possession', 'away_possession']);
     
     // Team-related terms
-    terms.set('home', ['home_team', 'home_goals', 'home_shots']);
-    terms.set('away', ['away_team', 'away_goals', 'away_shots']);
+    terms.set('home', ['home_team', 'home_score', 'home_shots']);
+    terms.set('away', ['away_team', 'away_score', 'away_shots']);
     terms.set('teams', ['home_team', 'away_team']);
     
     // Result-related terms
@@ -120,13 +123,15 @@ Provide a brief explanation (2-3 sentences) that:
     terms.set('loss', ['result']);
     
     // Match-related terms
-    terms.set('matches', ['id', 'date', 'home_team', 'away_team']);
-    terms.set('games', ['id', 'date', 'home_team', 'away_team']);
-    terms.set('fixtures', ['id', 'date', 'home_team', 'away_team']);
+    terms.set('matches', ['id', 'match_date', 'home_team', 'away_team']);
+    terms.set('games', ['id', 'match_date', 'home_team', 'away_team']);
+    terms.set('fixtures', ['id', 'match_date', 'home_team', 'away_team']);
     
     // Season-related terms
-    terms.set('season', ['season_id']);
-    terms.set('seasons', ['seasons']);
+    terms.set('season', ['season']);
+    terms.set('seasons', ['season']);
+    terms.set('current season', ['season']);
+    terms.set('this season', ['season']);
     
     return terms;
   }
@@ -216,37 +221,53 @@ Provide a brief explanation (2-3 sentences) that:
     let explanation = '';
     
     if (query.includes('goal') && query.includes('most')) {
-      sql = `SELECT home_team, away_team, (home_goals + away_goals) as total_goals, date
-             FROM matches 
-             ORDER BY total_goals DESC 
+      sql = `SELECT home_team, away_team, (home_score + away_score) as total_goals, match_date
+             FROM matches
+             WHERE season = '2024-2025'
+             ORDER BY total_goals DESC
              LIMIT 10`;
-      explanation = 'This query finds the matches with the most goals by adding home and away goals, then sorting by the total.';
+      explanation = 'This query finds the matches with the most goals by adding home and away scores, then sorting by the total.';
     } else if (query.includes('card') && query.includes('most')) {
-      sql = `SELECT home_team, away_team, (home_yellows + away_yellows + home_reds + away_reds) as total_cards, date
-             FROM matches 
-             ORDER BY total_cards DESC 
+      sql = `SELECT home_team, away_team, (home_yellow_cards + away_yellow_cards + home_red_cards + away_red_cards) as total_cards, match_date
+             FROM matches
+             WHERE season = '2024-2025'
+             ORDER BY total_cards DESC
              LIMIT 10`;
       explanation = 'This query finds matches with the most cards by adding all yellow and red cards.';
     } else if (query.includes('recent') || query.includes('latest')) {
-      sql = `SELECT home_team, away_team, home_goals, away_goals, date, result
-             FROM matches 
-             ORDER BY date DESC 
+      sql = `SELECT home_team, away_team, home_score, away_score, match_date
+             FROM matches
+             ORDER BY match_date DESC
              LIMIT 20`;
-      explanation = 'This query shows the most recent matches, ordered by date.';
+      explanation = 'This query shows the most recent matches, ordered by match date.';
     } else if (query.includes('home win')) {
-      sql = `SELECT home_team, away_team, home_goals, away_goals, date
-             FROM matches 
-             WHERE result = 'H' 
-             ORDER BY (home_goals - away_goals) DESC 
+      sql = `SELECT home_team, away_team, home_score, away_score, match_date
+             FROM matches
+             WHERE home_score > away_score AND season = '2024-2025'
+             ORDER BY (home_score - away_score) DESC
              LIMIT 15`;
       explanation = 'This query finds home wins, ordered by the goal difference.';
+    } else if (query.includes('liverpool') || query.includes('real madrid') || query.includes('barcelona')) {
+      // Handle specific team queries for European leagues
+      const teamPattern = query.includes('liverpool') ? 'Liverpool' :
+                         query.includes('real madrid') ? 'Real Madrid' : 'Barcelona';
+      sql = `SELECT home_team, away_team, home_score, away_score, match_date, l.league_name
+             FROM matches m
+             JOIN leagues l ON m.league_id = l.id
+             WHERE (home_team ILIKE '%${teamPattern}%' OR away_team ILIKE '%${teamPattern}%')
+             AND season = '2024-2025'
+             ORDER BY match_date DESC
+             LIMIT 20`;
+      explanation = `This query shows ${teamPattern} matches from the 2024-2025 season across European leagues.`;
     } else {
       // Default query
-      sql = `SELECT home_team, away_team, home_goals, away_goals, date, result
-             FROM matches 
-             ORDER BY date DESC 
+      sql = `SELECT home_team, away_team, home_score, away_score, match_date, l.league_name
+             FROM matches m
+             JOIN leagues l ON m.league_id = l.id
+             WHERE season = '2024-2025'
+             ORDER BY match_date DESC
              LIMIT 10`;
-      explanation = 'This is a general query showing recent matches with basic information.';
+      explanation = 'This is a general query showing recent matches with basic information from European leagues.';
     }
     
     return {
@@ -261,7 +282,7 @@ Provide a brief explanation (2-3 sentences) that:
 
   private generateFallbackQuery(naturalQuery: string): QueryResult {
     return {
-      sql: 'SELECT * FROM matches ORDER BY date DESC LIMIT 10',
+      sql: 'SELECT home_team, away_team, home_score, away_score, match_date FROM matches ORDER BY match_date DESC LIMIT 10',
       explanation: 'Default query showing recent matches (error occurred in query generation)',
       confidence: 0.3,
       tables: ['matches'],

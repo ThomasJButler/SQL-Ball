@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check, Key } from 'lucide-svelte';
+  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check, Key, AlertCircle } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { supabase } from '../lib/supabase';
+  import { apiService } from '../services/apiService';
 
   const dispatch = createEventDispatcher();
 
@@ -25,23 +26,46 @@
   let showOptimizations = false;
   let copySuccess = false;
   let isExecuting = false;
+  let useBackendAPI = true;
+  let backendAvailable = false;
+  let autoExecute = false;
+
+
+  // Save auto-execute preference
+  function toggleAutoExecute() {
+    autoExecute = !autoExecute;
+    localStorage.setItem('autoExecuteQueries', autoExecute.toString());
+  }
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "Show me the top 5 scorers",
-    "Which teams have the best home record?",
-    "Find all strikers with more than 10 goals",
-    "Show me Arsenal's recent matches",
-    "Who has the most assists this season?",
-    "List the clean sheets by goalkeepers",
-    "Show matches with highest expected goals",
-    "Find players from Manchester clubs"
+    "Show me Liverpool's latest Premier League matches",
+    "Find Real Madrid vs Barcelona matches this season",
+    "Which Bundesliga teams score the most goals at home?",
+    "Show me Serie A matches with more than 4 goals",
+    "Compare PSG's home vs away record in Ligue 1",
+    "Find matches with the most red cards across all leagues",
+    "Show Arsenal's Champions League results this season",
+    "Which teams in La Liga have the strongest defense?"
   ];
 
-  onMount(() => {
-    // Check if OpenAI API key is configured
-    const apiKey = localStorage.getItem('openai_api_key');
-    hasApiKey = !!apiKey;
+  onMount(async () => {
+    // Check if backend API is available
+    backendAvailable = await apiService.isAvailable();
+
+    if (!backendAvailable) {
+      // Fallback to checking for OpenAI API key for direct use
+      const apiKey = localStorage.getItem('openai_api_key');
+      hasApiKey = !!apiKey;
+      useBackendAPI = false;
+    } else {
+      // Backend is available, no need for direct API key
+      hasApiKey = true;
+      useBackendAPI = true;
+    }
+
+    // Load auto-execute preference from localStorage
+    autoExecute = localStorage.getItem('autoExecuteQueries') === 'true';
   });
 
   function navigateToSettings() {
@@ -51,8 +75,8 @@
   async function handleSubmit() {
     if (!naturalQuery.trim()) return;
 
-    if (!hasApiKey) {
-      error = 'Please add your OpenAI API key in Settings to use the Query Builder.';
+    if (!useBackendAPI && !hasApiKey) {
+      error = 'Please add your OpenAI API key in Settings or ensure the backend API is running.';
       return;
     }
 
@@ -63,29 +87,66 @@
     showOptimizations = false;
 
     try {
-      const apiKey = localStorage.getItem('openai_api_key');
-      if (!apiKey) {
-        throw new Error('OpenAI API key not found');
-      }
+      if (useBackendAPI) {
+        // Get API key from localStorage for backend request
+        const apiKey = localStorage.getItem('openai_api_key');
+        
+        if (!apiKey) {
+          error = 'Please add your OpenAI API key in Settings to use the backend RAG service.';
+          return;
+        }
 
-      // Make direct call to OpenAI API
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4-turbo-preview',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
+        // Use backend API service with API key
+        const response = await apiService.convertToSQL({
+          question: naturalQuery,
+          season: selectedSeason,
+          include_explanation: true,
+          api_key: apiKey
+        });
+
+        queryResult = {
+          sql: response.sql,
+          explanation: response.explanation || 'Query generated successfully',
+          confidence: 0.95,
+          optimizationSuggestions: response.optimizations || [],
+          performanceEstimate: response.execution_time_ms 
+            ? `${response.execution_time_ms}ms` 
+            : 'Fast'
+        };
+
+        // If backend already executed the query
+        if (response.results) {
+          executionResult = response.results;
+        } else if (autoExecute) {
+          // Auto-execute the query if toggle is enabled
+          await executeSQL();
+        }
+      } else {
+        // Fallback to direct OpenAI API call
+        const apiKey = localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+          throw new Error('OpenAI API key not found');
+        }
+
+        // Make direct call to OpenAI API
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4-turbo-preview',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
 
 Database Schema:
-- seasons table: id, name (e.g., '2024-25', '2025-26')
-- matches table: id, season_id, date, home_team, away_team, home_score, away_score, home_xg, away_xg, home_shots, away_shots, result (H/A/D)
-- player_stats table: id, season_id, player_name, team, position, goals, assists, xg, xa, minutes_played, appearances
+- seasons table: id, name (e.g., '2023-24', '2024-25')
+- matches table: id, season_id, match_date, home_team, away_team, home_score, away_score, home_xg, away_xg, home_shots, away_shots, result (H/A/D)
+- leagues table: id, league_name, country (e.g., 'Premier League', 'La Liga', 'Bundesliga')
+- teams table: id, team_name, league_id
 
 Rules:
 1. Return ONLY the SQL query, no explanations or markdown
@@ -96,39 +157,50 @@ Rules:
 6. For team names, use ILIKE for case-insensitive matching
 7. Format dates properly for PostgreSQL
 
-Example:
+Examples:
 Input: "Show me Liverpool's recent matches"
-Output: SELECT date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY date DESC LIMIT 10`
-            },
-            { role: 'user', content: naturalQuery }
-          ],
-          temperature: 0.2,
-          max_tokens: 500
-        })
-      });
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY match_date DESC LIMIT 10
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate SQL');
+Input: "Find Real Madrid goals this season"
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Real Madrid%' OR away_team ILIKE '%Real Madrid%') AND season_id = '2024-25' ORDER BY match_date DESC LIMIT 20`
+              },
+              { role: 'user', content: naturalQuery }
+            ],
+            temperature: 0.2,
+            max_tokens: 500
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to generate SQL');
+        }
+
+        const data = await response.json();
+        const generatedSQL = data.choices[0].message.content;
+
+        // Store the response
+        queryResult = {
+          sql: generatedSQL.trim(),
+          explanation: 'Query generated successfully',
+          confidence: 0.95,
+          optimizationSuggestions: [],
+          performanceEstimate: 'Fast'
+        };
+
+        // Auto-execute the query if toggle is enabled
+        if (autoExecute) {
+          await executeSQL();
+        }
       }
-
-      const data = await response.json();
-      const generatedSQL = data.choices[0].message.content;
-
-      // Store the response
-      queryResult = {
-        sql: generatedSQL.trim(),
-        explanation: 'Query generated successfully',
-        confidence: 0.95,
-        optimizationSuggestions: [],
-        performanceEstimate: 'Fast'
-      };
-
-      // Auto-execute the query
-      await executeSQL();
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
       console.error('Query error:', err);
+      
+      // If backend fails, try to fallback
+      if (useBackendAPI && err.message.includes('fetch')) {
+        error = 'Backend API is not available. Please ensure the backend server is running or add your OpenAI API key in Settings.';
+      }
     } finally {
       isLoading = false;
     }
@@ -180,29 +252,13 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
     executionResult = [];
 
     try {
-      // Clean the SQL - remove trailing semicolon for Supabase
-      const sql = queryResult.sql.replace(/;\s*$/, '');
-
-      // Use Supabase RPC to execute the SQL
-      const { data, error: execError } = await supabase
-        .rpc('execute_sql', { query_text: sql });
-
-      if (execError) {
-        error = `Query execution failed: ${execError.message}`;
-        console.error('Execution error:', execError);
-        return;
-      }
-
-      // Check if the result contains an error
-      if (data && data.error) {
-        error = `SQL Error: ${data.message}`;
-        return;
-      }
-
-      // Parse the results
-      executionResult = data || [];
-
-      if (executionResult.length === 0) {
+      // Use backend API service to execute SQL
+      const results = await apiService.executeSQL(queryResult.sql);
+      
+      // Handle the response
+      if (results && results.length > 0) {
+        executionResult = results;
+      } else {
         error = 'Query executed successfully but returned no results';
       }
     } catch (err) {
@@ -283,16 +339,25 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
     </p>
   </div>
 
-  <!-- API Key Check -->
-  {#if !hasApiKey}
+  <!-- Backend Status -->
+  {#if useBackendAPI && backendAvailable}
+    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <p class="text-sm text-green-700 dark:text-green-400">
+          Connected to backend RAG service
+        </p>
+      </div>
+    </div>
+  {:else if !hasApiKey}
     <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <Key class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <AlertCircle class="w-6 h-6 text-amber-600 dark:text-amber-400" />
           <div>
-            <h3 class="font-semibold text-slate-900 dark:text-white">OpenAI API Key Required</h3>
+            <h3 class="font-semibold text-slate-900 dark:text-white">Backend API Not Available</h3>
             <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Add your OpenAI API key in Settings to enable natural language to SQL conversion
+              Start the backend server or add your OpenAI API key in Settings as a fallback
             </p>
           </div>
         </div>
@@ -348,7 +413,21 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
             Generate SQL
           {/if}
         </button>
-        
+
+        <!-- Auto-execute toggle -->
+        <div class="flex items-center gap-2">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              bind:checked={autoExecute}
+              on:change={toggleAutoExecute}
+              class="sr-only peer"
+            />
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+          </label>
+          <span class="text-sm text-slate-600 dark:text-slate-400">Auto-execute</span>
+        </div>
+
         <button
           type="button"
           on:click={() => showExamples = !showExamples}
@@ -400,7 +479,7 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
             <div class="flex items-center gap-2">
               <span class="text-sm text-slate-500">Confidence:</span>
               <span class="text-sm font-medium text-green-600 dark:text-green-400">
-                {Math.round(queryResult.confidence * 100)}%
+                {Math.round((queryResult.confidence || 0) * 100)}%
               </span>
             </div>
             <button
@@ -423,7 +502,8 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
 {formatSQL(queryResult.sql)}
         </pre>
 
-        <!-- Execute Button -->
+        <!-- Execute Button - Show when auto-execute is disabled -->
+        {#if !autoExecute || executionResult.length === 0}
         <div class="flex justify-end">
           <button
             on:click={executeSQL}
@@ -439,6 +519,7 @@ Output: SELECT date, home_team, away_team, home_score, away_score FROM matches W
             {/if}
           </button>
         </div>
+        {/if}
 
         <!-- Explanation -->
         <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
