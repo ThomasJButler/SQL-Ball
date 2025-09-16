@@ -34,14 +34,77 @@
       // Save query to localStorage
       localStorage.setItem('last_sql_query', sqlQuery);
 
-      // Execute the raw SQL query
-      const { data, error: queryError } = await supabase.rpc('execute_sql', {
-        query: sqlQuery
-      });
+      // Parse the SQL query to determine what table/operation
+      const cleanQuery = sqlQuery.trim().toLowerCase();
 
-      if (queryError) throw queryError;
+      if (cleanQuery.startsWith('select')) {
+        // For SELECT queries, try to parse and execute via Supabase client
+        const fromMatch = cleanQuery.match(/from\s+(\w+)/);
+        if (!fromMatch) {
+          throw new Error('Could not identify table in query');
+        }
 
-      results = data || [];
+        const table = fromMatch[1];
+
+        // For simple queries, use Supabase client
+        if (!cleanQuery.includes('join') && !cleanQuery.includes('group by')) {
+          let query = supabase.from(table).select('*');
+
+          // Handle WHERE clause
+          const whereMatch = cleanQuery.match(/where\s+(.+?)(?:\s+order\s+by|\s+limit|$)/);
+          if (whereMatch) {
+            // Parse simple WHERE conditions
+            const conditions = whereMatch[1];
+            // Handle simple equality conditions
+            const eqMatch = conditions.match(/(\w+)\s*=\s*['"]?([^'"]+)['"]?/);
+            if (eqMatch) {
+              query = query.eq(eqMatch[1], eqMatch[2]);
+            }
+            // Handle LIKE conditions
+            const likeMatch = conditions.match(/(\w+)\s+(?:i)?like\s+['"]?([^'"]+)['"]?/i);
+            if (likeMatch) {
+              query = query.ilike(likeMatch[1], likeMatch[2]);
+            }
+          }
+
+          // Handle ORDER BY
+          const orderMatch = cleanQuery.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
+          if (orderMatch) {
+            query = query.order(orderMatch[1], { ascending: orderMatch[2] !== 'desc' });
+          }
+
+          // Handle LIMIT
+          const limitMatch = cleanQuery.match(/limit\s+(\d+)/);
+          if (limitMatch) {
+            query = query.limit(parseInt(limitMatch[1]));
+          }
+
+          const { data, error: queryError } = await query;
+          if (queryError) throw queryError;
+          results = data || [];
+        } else {
+          // For complex queries, we need RPC or raw SQL support
+          // Since RPC might not exist, show an informative error
+          error = 'Complex queries with JOINs or GROUP BY require direct database access. Please use simpler queries or check if the execute_sql RPC function exists in your Supabase database.';
+
+          // Try the RPC anyway in case it exists
+          try {
+            const { data, error: rpcError } = await supabase.rpc('execute_sql', {
+              query_text: sqlQuery
+            });
+            if (!rpcError && data) {
+              results = data;
+              error = null; // Clear the error if RPC worked
+            }
+          } catch (rpcErr) {
+            // RPC doesn't exist, keep the informative error message
+            console.log('RPC not available, using fallback message');
+          }
+        }
+      } else {
+        error = 'Only SELECT queries are supported in this interface';
+      }
+
       executionTime = Math.round(performance.now() - startTime);
     } catch (err: any) {
       error = err.message || 'Failed to execute query';
@@ -80,6 +143,34 @@
     error = null;
     localStorage.removeItem('last_sql_query');
   }
+
+  // Example queries for users
+  const exampleQueries = [
+    {
+      title: "Recent Liverpool matches",
+      query: "SELECT * FROM matches WHERE home_team = 'Liverpool' OR away_team = 'Liverpool' ORDER BY date DESC LIMIT 10"
+    },
+    {
+      title: "High scoring games",
+      query: "SELECT * FROM matches WHERE (home_score + away_score) > 5 ORDER BY date DESC LIMIT 20"
+    },
+    {
+      title: "Arsenal home games",
+      query: "SELECT * FROM matches WHERE home_team = 'Arsenal' AND season_id = '2024-25' ORDER BY date DESC"
+    },
+    {
+      title: "Top scorers",
+      query: "SELECT * FROM player_stats WHERE season_id = '2024-25' ORDER BY goals DESC LIMIT 20"
+    },
+    {
+      title: "Clean sheets",
+      query: "SELECT * FROM matches WHERE home_score = 0 OR away_score = 0 ORDER BY date DESC LIMIT 15"
+    }
+  ];
+
+  function useExample(query: string) {
+    sqlQuery = query;
+  }
 </script>
 
 <div class="max-w-7xl mx-auto">
@@ -88,6 +179,21 @@
     <p class="text-slate-600 dark:text-slate-400">
       Paste your generated SQL query here and execute it against the database
     </p>
+  </div>
+
+  <!-- Example Queries -->
+  <div class="mb-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Example Queries</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+      {#each exampleQueries as example}
+        <button
+          on:click={() => useExample(example.query)}
+          class="text-left px-3 py-2 bg-white dark:bg-slate-800 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-400 transition-colors text-sm border border-slate-200 dark:border-slate-700"
+        >
+          {example.title}
+        </button>
+      {/each}
+    </div>
   </div>
 
   <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6">

@@ -7,11 +7,13 @@
     Tooltip,
     Legend,
     LineElement,
+    LineController,
     LinearScale,
     CategoryScale,
     PointElement,
     Filler,
-    type ChartData
+    type ChartData,
+    type ChartOptions
   } from 'chart.js';
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
@@ -21,14 +23,16 @@
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
   import type { Match } from '../types';
 
+  // Register all required Chart.js components
   ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    LineController,
     Title,
     Tooltip,
     Legend,
-    LineElement,
-    LinearScale,
-    CategoryScale,
-    PointElement,
     Filler
   );
 
