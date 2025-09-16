@@ -3,27 +3,23 @@
   import Sidebar from './components/Sidebar.svelte';
   import MobileNav from './components/MobileNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
-  import MatchList from './components/MatchList.svelte';
-  import Predictions from './components/Predictions.svelte';
-  import BettingHistory from './components/BettingHistory.svelte';
+  import QueryBuilder from './components/QueryBuilder.svelte';
+  import SubmitQuery from './components/SubmitQuery.svelte';
+  import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
-  import LiveTicker from './components/LiveTicker.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
-  import KellyCalculator from './components/betting/KellyCalculator.svelte';
-  import ValueBets from './components/betting/ValueBets.svelte';
   import Settings from './components/Settings.svelte';
-  import ApiSetupWizard from './components/ApiSetupWizard.svelte';
+  import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
   import Help from './components/Help.svelte';
   import TopScorers from './components/TopScorers.svelte';
-  import LiveMatches from './components/LiveMatches.svelte';
   import PlayerProfile from './components/PlayerProfile.svelte';
   import { onMount } from 'svelte';
 
   let currentView = 'Dashboard'; // Default view
   let isSidebarOpen = false; // Start with sidebar closed
   let isTransitioning = false;
-  let showApiSetup = false;
-  let hasApiKey = false;
+  let showOpenAISetup = false;
+  let hasOpenAIKey = false;
   let dashboardComponent: Dashboard;
   
   function navigate(event: CustomEvent<{ view: string }>) {
@@ -47,44 +43,17 @@
     if (window.innerWidth >= 1024) { // Large desktop screens
       isSidebarOpen = true;
     }
-    
-    // Check for API key on load
-    checkApiKey();
+
+    // Check for OpenAI API key in localStorage
+    const openAIKey = localStorage.getItem('openai_api_key');
+    hasOpenAIKey = !!openAIKey;
+
+    // Show setup wizard if no OpenAI key found
+    if (!hasOpenAIKey) {
+      showOpenAISetup = true;
+    }
   });
 
-  function checkApiKey() {
-    const apiKey = localStorage.getItem('football_data_api_key');
-    hasApiKey = !!apiKey;
-    
-    // Show setup wizard if no API key found
-    if (!hasApiKey) {
-      showApiSetup = true;
-    }
-  }
-
-  async function handleApiSetupComplete(event: CustomEvent<{ apiKey: string }>) {
-    hasApiKey = true;
-    showApiSetup = false;
-    
-    // Refresh data services with new API key
-    const { dataService } = await import('./services/dataService');
-    const { footballDataAPI } = await import('./services/api/footballData');
-    
-    // Set the API key in the Football Data API
-    footballDataAPI.setApiKey(event.detail.apiKey);
-    
-    // Refresh data source availability
-    await dataService.refreshDataSources();
-    
-    console.log('✅ API key setup completed successfully');
-    
-    // Refresh dashboard if it's currently loaded
-    if (currentView === 'Dashboard' && dashboardComponent) {
-      setTimeout(() => {
-        dashboardComponent.refresh();
-      }, 100);
-    }
-  }
 
 </script>
 
@@ -109,7 +78,6 @@
 
   <div class="flex-1 flex flex-col overflow-hidden">
     <Header toggleSidebar={toggleSidebar} />
-    <LiveTicker />
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-white dark:bg-slate-950 p-4 sm:p-6 lg:p-8 relative">
       <!-- Page transition overlay -->
@@ -121,16 +89,12 @@
       <div class="page-content" class:transitioning={isTransitioning}>
         {#if currentView === 'Dashboard'}
           <Dashboard bind:this={dashboardComponent} />
-        {:else if currentView === 'Matches'}
-          <MatchList />
-        {:else if currentView === 'Predictions'}
-          <Predictions />
-        {:else if currentView === 'Kelly Calculator'}
-          <KellyCalculator />
-        {:else if currentView === 'Value Bets'}
-          <ValueBets />
-        {:else if currentView === 'Betting History'}
-          <BettingHistory />
+        {:else if currentView === 'Query Builder'}
+          <QueryBuilder />
+        {:else if currentView === 'Submit Query'}
+          <SubmitQuery />
+        {:else if currentView === 'Pattern Discovery'}
+          <PatternDiscovery />
         {:else if currentView === 'AI Assistant'}
           <AiAssistant />
         {:else if currentView === 'Season Stats'}
@@ -141,8 +105,6 @@
           <Help />
         {:else if currentView === 'Top Scorers'}
           <TopScorers />
-        {:else if currentView === 'Live Matches'}
-          <LiveMatches />
         {:else if currentView === 'Player Profile'}
           <PlayerProfile />
         {/if}
@@ -152,17 +114,30 @@
   
   <!-- Mobile Navigation -->
   <MobileNav {currentView} on:navigate={navigate} />
-  
+
+  <!-- OpenAI Setup Wizard -->
+  {#if showOpenAISetup}
+    <OpenAISetupWizard
+      on:complete={() => {
+        showOpenAISetup = false;
+        hasOpenAIKey = true;
+      }}
+      on:skip={() => {
+        showOpenAISetup = false;
+      }}
+    />
+  {/if}
+
   <!-- Floating Action Buttons -->
   <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-    <!-- Quick Prediction FAB -->
+    <!-- Query Builder FAB -->
     <button 
       class="fab-button group"
-      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'Predictions'}}))}
-      aria-label="Quick Predictions"
+      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'Query Builder'}}))}
+      aria-label="Query Builder"
     >
-      <div class="fab-icon">⚡</div>
-      <div class="fab-tooltip">Quick Predictions</div>
+      <div class="fab-icon">🔍</div>
+      <div class="fab-tooltip">Query Builder</div>
     </button>
     
     <!-- AI Assistant FAB -->
@@ -181,10 +156,6 @@
     </div>
   </div>
 
-  <!-- API Setup Wizard -->
-  {#if showApiSetup}
-    <ApiSetupWizard on:complete={handleApiSetupComplete} />
-  {/if}
 </div>
 
 <style global lang="postcss">

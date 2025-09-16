@@ -15,12 +15,9 @@ export interface Match {
   date: string;
   home_team: string;
   away_team: string;
-  home_goals: number | null;
-  away_goals: number | null;
+  home_score: number | null;
+  away_score: number | null;
   result: 'H' | 'A' | 'D' | null;
-  home_odds: number | null;
-  draw_odds: number | null;
-  away_odds: number | null;
   first_half_home_goals: number | null;
   first_half_away_goals: number | null;
   full_time_result: 'H' | 'A' | 'D' | null;
@@ -69,24 +66,12 @@ export interface TeamStats {
   updated_at: string;
 }
 
-export interface Prediction {
-  id: string;
-  match_id: string;
-  predicted_result: 'H' | 'A' | 'D';
-  confidence_score: number;
-  predicted_home_goals: number;
-  predicted_away_goals: number;
-  was_correct: boolean;
-  prediction_date: string;
-  created_at: string;
-}
 
 export interface TeamForm {
-  opponent: string;
-  goalsFor: number | null;
-  goalsAgainst: number | null;
-  result: 'W' | 'L' | 'D' | null;
-  date: string;
+  match: Match;
+  result: 'W' | 'L' | 'D';
+  goalsScored: number;
+  goalsConceded: number;
 }
 
 export interface Standing {

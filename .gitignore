@@ -136,3 +136,6 @@ dist
 .pnp.*
 CLAUDE.md
 /.claude
+/trainingdocs
+/docs
+SQL_BALL_RAG_PLAN.md

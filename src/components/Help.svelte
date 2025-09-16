@@ -115,14 +115,11 @@
                 </div>
               </div>
 
-              <a 
-                href="https://www.football-data.org/client/register" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Get Your Free API Key <ExternalLink class="w-4 h-4" />
-              </a>
+              <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-300">
+                  Data is sourced from our Supabase database with comprehensive Premier League statistics.
+                </p>
+              </div>
             </div>
 
           {:else if selectedSection === 'predictions'}
