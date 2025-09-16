@@ -7,7 +7,6 @@
   import SubmitQuery from './components/SubmitQuery.svelte';
   import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
-  import LiveTicker from './components/LiveTicker.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
   import Settings from './components/Settings.svelte';
   import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
@@ -79,7 +78,6 @@
 
   <div class="flex-1 flex flex-col overflow-hidden">
     <Header toggleSidebar={toggleSidebar} />
-    <LiveTicker />
 
     <main class="flex-1 overflow-x-hidden overflow-y-auto bg-white dark:bg-slate-950 p-4 sm:p-6 lg:p-8 relative">
       <!-- Page transition overlay -->
