@@ -25,78 +25,47 @@ export interface UnusualMatch extends Match {
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Check if we have valid Supabase credentials
 export const hasValidSupabaseConfig = () => {
-  return supabaseUrl && supabaseUrl !== 'https://your-project-id.supabase.co' && 
-         supabaseAnonKey && supabaseAnonKey !== 'your-anon-key-here';
+  const hasUrl = supabaseUrl && supabaseUrl !== '' && supabaseUrl !== 'https://your-project-id.supabase.co';
+  const hasKey = supabaseAnonKey && supabaseAnonKey !== '' && supabaseAnonKey !== 'your-anon-key-here';
+  console.log('Supabase config check - URL:', hasUrl ? 'valid' : 'invalid', 'Key:', hasKey ? 'valid' : 'invalid');
+  console.log('Supabase URL:', supabaseUrl);
+  return hasUrl && hasKey;
 };
 
 // Create client only if we have valid credentials, otherwise create a dummy client
-export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://your-project-id.supabase.co') 
+export const supabase = hasValidSupabaseConfig()
   ? createClient(supabaseUrl, supabaseAnonKey)
   : createClient('https://placeholder.supabase.co', 'placeholder-key'); // This will fail gracefully
 
 // Helper functions for database queries
-export async function getRecentMatches(limit: number = 10, season: string = '2024-2025'): Promise<Match[]> {
+export async function getRecentMatches(limit: number = 10000): Promise<Match[]> {
   if (!hasValidSupabaseConfig()) {
     // Return demo data when Supabase is not configured
     return getDemoMatches().slice(0, limit);
   }
   
+  console.log('Fetching ALL matches from Supabase (up to', limit, 'records)...');
+  
+  // Fetch ALL matches without any season filter - just get everything!
   const { data, error } = await supabase
     .from('matches')
     .select('*')
-    .eq('season', season)
     .order('match_date', { ascending: false })
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching recent matches:', error);
-    // Fallback to any recent matches if season-specific query fails
-    const { data: fallbackData } = await supabase
-      .from('matches')
-      .select('*')
-      .order('match_date', { ascending: false })
-      .limit(limit);
-    
-    // Map the database fields to our Match type
-    return (fallbackData || []).map(match => ({
-      id: match.id || '',
-      season_id: match.season || '2024-2025',
-      match_date: match.match_date || new Date().toISOString(),
-      div: match.div || 'E0',
-      home_team: match.home_team || `Team ${match.id}`,
-      away_team: match.away_team || `Team ${match.id}`,
-      home_score: match.home_score || 0,
-      away_score: match.away_score || 0,
-      result: match.result || (
-        match.home_score > match.away_score ? 'H' :
-        match.home_score < match.away_score ? 'A' : 'D'
-      ),
-      ht_home_score: match.ht_home_score || 0,
-      ht_away_score: match.ht_away_score || 0,
-      ht_result: match.ht_result || '',
-      referee: match.referee || '',
-      home_shots: match.home_shots || 0,
-      away_shots: match.away_shots || 0,
-      home_shots_target: match.home_shots_target || 0,
-      away_shots_target: match.away_shots_target || 0,
-      home_fouls: match.home_fouls || 0,
-      away_fouls: match.away_fouls || 0,
-      home_corners: match.home_corners || 0,
-      away_corners: match.away_corners || 0,
-      home_yellow_cards: match.home_yellow_cards || 0,
-      away_yellow_cards: match.away_yellow_cards || 0,
-      home_red_cards: match.home_red_cards || 0,
-      away_red_cards: match.away_red_cards || 0,
-      season: match.season || '2024-2025',
-      created_at: match.created_at || match.match_date || new Date().toISOString()
-    })) as Match[];
+    console.error('Error fetching matches from Supabase:', error);
+    // If there's an error, return demo data as fallback
+    return getDemoMatches().slice(0, 6);
   }
   
-  // Map the database fields to our Match type for successful queries
+  console.log('Successfully fetched', data?.length || 0, 'matches from Supabase!');
+  
+  // Map the database fields to our Match type
   return (data || []).map(match => ({
     id: match.id || '',
     season_id: match.season || '2024-2025',
@@ -467,8 +436,8 @@ function getDemoUnusualMatches(): UnusualMatch[] {
   return [
     {
       id: '5',
-      season_id: '2024-25',
       match_date: '2024-09-10',
+      div: 'E0',
       home_team: 'Brighton',
       away_team: 'West Ham',
       home_score: 4,
@@ -476,6 +445,7 @@ function getDemoUnusualMatches(): UnusualMatch[] {
       result: 'H',
       ht_home_score: 2,
       ht_away_score: 0,
+      ht_result: 'H',
       referee: 'Craig Pawson',
       home_shots: 22,
       away_shots: 6,
@@ -497,8 +467,8 @@ function getDemoUnusualMatches(): UnusualMatch[] {
     },
     {
       id: '3',
-      season_id: '2024-25',
       match_date: '2024-09-12',
+      div: 'E0',
       home_team: 'Tottenham',
       away_team: 'Newcastle',
       home_score: 1,
@@ -506,6 +476,7 @@ function getDemoUnusualMatches(): UnusualMatch[] {
       result: 'A',
       ht_home_score: 0,
       ht_away_score: 2,
+      ht_result: 'A',
       referee: 'Paul Tierney',
       home_shots: 11,
       away_shots: 18,

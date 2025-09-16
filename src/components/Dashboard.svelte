@@ -108,12 +108,12 @@
 
       console.log('Loading Dashboard with European league data...');
 
-      // Get comprehensive European league data (increased from 100 to 500 for better statistics)
-      const allMatches = await getRecentMatches(500);
+      // Get ALL European league data (fetch up to 10,000 matches!)
+      const allMatches = await getRecentMatches(10000);
       console.log('Dashboard loaded European matches:', allMatches.length);
 
-      // Use most recent 30 matches for "Recent Matches" display (increased from 20)
-      recentMatches = allMatches.slice(0, 30);
+      // Pass ALL matches to visualizations, not just 30!
+      recentMatches = allMatches;
 
       // Calculate statistics from all fetched matches to show impressive European data
       if (allMatches.length > 0) {

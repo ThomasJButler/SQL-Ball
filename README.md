@@ -1,244 +1,58 @@
-# ⚽ SQL-Ball: RAG-Powered Football Analytics
+# SQL-Ball
 
-![Version](https://img.shields.io/badge/version-1.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Contest](https://img.shields.io/badge/GenAI%20Bootcamp-Contest%20Entry-orange)
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
-![Progress](https://img.shields.io/badge/progress-transforming-orange)
-
-> 🚧 **Work in Progress**: Currently transforming from PLOracle to SQL-Ball for the GenAI Bootcamp Contest. Target completion: 6th September 2025.
-
-A revolutionary football data analytics platform that transforms natural language queries into optimised SQL, discovers hidden patterns in match data, and provides interactive data exploration. Built for the Codecademy GenAI Bootcamp Contest #1, SQL-Ball focuses on historical data analysis and unusual statistics discovery without any prediction capabilities.
-
-## 🏆 Contest Entry
-
-This project is built specifically for the **Codecademy GenAI Bootcamp Contest #1** (Deadline: 6th September 2025). SQL-Ball demonstrates the power of RAG (Retrieval-Augmented Generation) technology combined with football analytics to create an intuitive, powerful data exploration tool.
+SQL-Ball is a football analytics platform that transforms football match data into actionable insights through interactive visualizations and natural language queries. This project was developed as a content project for the **CodeCademy Mastering Generative AI for Developers Bootcamp** held from August to September 2025.
 
 ## Overview
 
-SQL-Ball revolutionises how we interact with football data by eliminating the complexity of SQL syntax whilst maintaining its power. Using cutting-edge RAG technology with LangChain and ChromaDB, users can explore Premier League match data through natural language, discovering patterns and anomalies that traditional analysis might miss.
+SQL-Ball allows users to:
+- View and analyze historical match data.
+- Filter data by league division (e.g., Premier League, La Liga, Bundesliga).
+- Generate visualizations including trends, distribution charts, and performance radar charts.
+- Execute natural language queries converted to SQL for retrieving football statistics.
 
-| Desktop Analytics | Mobile View |
-| ----------------- | ----------- |
-| ![Desktop Preview](https://github.com/user-attachments/assets/sql-ball-desktop.png) | ![Mobile Preview](https://github.com/user-attachments/assets/sql-ball-mobile.png) |
+## Architecture & Use Cases
 
-### Data Focus
+For detailed architectural decisions and design patterns used in this project, please refer to [ARCHITECTURE.md](ARCHITECTURE.md).
 
-All analysis is based on historical Premier League match data stored in Supabase PostgreSQL. The platform analyses:
-- Match results and statistics
-- Team performance patterns
-- Historical trends and anomalies
-- Unusual statistical discoveries
-- **NO predictions or future forecasting**
-- **NO betting or gambling features**
+**Key Use Cases:**
+- **Data Filtering:** Filter match data based on league divisions using unique codes such as:
+  - **Premier League (E1)**
+  - **La Liga (SP1)**
+  - **Bundesliga (G1)**
+- **Interactive Visualizations:** Generate charts for goals trends, result distributions, and team performance.
+- **Natural Language Querying:** Allow users to enter plain-English queries that are converted into SQL to retrieve relevant insights.
+- **Backend Integration:** Support backend data processing (Python-based API) and a frontend built with Svelte and Vite.
 
-### Key Features
+## Project Details
 
-- **Natural Language to SQL**: Type queries in plain English, get optimised SQL instantly
-- **Pattern Discovery Engine**: AI-powered detection of unusual statistics and anomalies
-- **Visual Query Builder**: Drag-and-drop interface for building complex queries
-- **SQL Learning Mode**: Interactive tutorials using real football data
-- **Performance Optimisation**: AI suggests query improvements and indexes
-- **Multi-Dialect Support**: Works with PostgreSQL, MySQL, SQLite
-- **Real-time Collaboration**: Share and improve queries with your team
+- **Frontend:** Built using Svelte and Vite, with visualizations rendered via Chart.js components.
+- **Backend:** Python scripts and APIs serve match data and handle data processing.
+- **Deployment:** Designed to be deployed to Vercel with separate configuration for the backend. Sensitive files like `backend/.env` should be added to `.gitignore` to protect credentials.
+- **Content Project:** This project was created as part of an intensive bootcamp to master generative AI applications in software development.
 
-## 🚀 Quick Start
+## Getting Started
 
-### Prerequisites
-- Node.js 18+ and npm
-- Supabase account with match data
-- OpenAI API key for RAG functionality
+1. **Installation:**
+   - Clone the repository.
+   - Install dependencies using `npm install` for the frontend.
+   - Set up the backend by following the instructions in `backend/setup.sh`.
+   - Ensure you have proper environment variables set up (see `.env.example`).
 
-### Installation
+2. **Development:**
+   - Start the frontend by running `npm run dev`.
+   - For backend development, run the provided scripts in the `backend` directory.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/SQL-Ball.git
-   cd SQL-Ball
-   ```
+3. **Deployment:**
+   - The project is ready for deployment on Vercel. Make sure to configure environment variables on Vercel and exclude sensitive files (like `backend/.env`) from version control.
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+## Contributing
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Add your Supabase and OpenAI keys
-   ```
+Contributions are welcome! Please check the issues and submit pull requests for enhancements or bug fixes. For major changes, please open an issue first to discuss the proposed changes.
 
-4. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+## License
 
-5. **Open in browser**
-   Navigate to `http://localhost:5173`
+This project is licensed under the terms described in the [LICENSE](LICENSE) file.
 
-## 💡 Example Queries
+## Acknowledgements
 
-Try these natural language queries to explore the data:
-
-```
-"Show me the biggest upset victories this season"
-"Which teams score the most goals in the last 15 minutes?"
-"Find matches with unusual scorelines"
-"What are the most one-sided rivalries?"
-"Show teams with the best away record"
-```
-
-Each query is converted to optimised SQL with explanations suitable for beginners.
-
-## 🛠️ Technology Stack
-
-- **Frontend**: Svelte 4.2 + TypeScript + Tailwind CSS
-- **RAG System**: LangChain + ChromaDB for semantic search
-- **Database**: Supabase PostgreSQL
-- **Visualisation**: D3.js + Chart.js
-- **AI**: OpenAI GPT-4 for query generation
-- **Deployment**: Vercel
-- **Theme**: Matrix-inspired dark theme
-
-## 📊 Core Capabilities
-
-### RAG-Powered Query Understanding
-- Semantic search of database schema
-- Context-aware query generation
-- Automatic query optimisation
-- Multi-step query planning
-- Performance prediction
-
-### Pattern Discovery
-- Statistical anomaly detection
-- Unusual match finder
-- Historical trend analysis
-- Team consistency metrics
-- Referee pattern analysis
-
-### Visual Analytics
-- Interactive charts and graphs
-- Heatmaps for team performance
-- Timeline visualisations
-- Network graphs for team relationships
-- Custom dashboard creation
-
-## 🎯 Contest Features
-
-Built specifically to excel in the GenAI Bootcamp Contest judging criteria:
-
-### Functionality (100% Complete)
-- ✅ Natural language to SQL conversion
-- ✅ Semantic search with ChromaDB
-- ✅ LangChain integration
-- ✅ Query optimisation
-- ✅ Beginner-friendly explanations
-
-### Innovation
-- 🚀 Football-specific pattern discovery
-- 🚀 Visual query builder
-- 🚀 Interactive SQL tutorials
-- 🚀 Performance simulation
-- 🚀 Real-time collaboration
-
-### Execution
-- ⚡ <50ms query generation
-- ⚡ 95+ Lighthouse score
-- ⚡ Mobile responsive
-- ⚡ Comprehensive documentation
-- ⚡ Production ready
-
-### Presentation
-- 🎨 Matrix-themed UI
-- 🎨 Smooth animations
-- 🎨 Professional demo video
-- 🎨 LinkedIn showcase ready
-
-## 🏗️ Project Structure
-
-```
-SQL-Ball/
-├── src/
-│   ├── components/     # Svelte components
-│   ├── lib/
-│   │   ├── rag/       # RAG system
-│   │   ├── analytics/ # Pattern discovery
-│   │   └── queryEngine/ # SQL generation
-│   ├── services/      # API services
-│   └── styles/        # Tailwind + Matrix theme
-├── supabase/
-│   └── migrations/    # Database schema
-├── docs/             # Documentation
-└── public/           # Static assets
-```
-
-## 📖 Documentation
-
-### For Users
-- [Quick Start Guide](./docs/SQL-BALL_QUICK_START.md)
-- [Query Examples](./docs/query-examples.md)
-- [Pattern Discovery Guide](./docs/pattern-discovery.md)
-
-### For Developers
-- [Architecture Overview](./docs/architecture.md)
-- [RAG Implementation](./docs/rag-system.md)
-- [Contributing Guide](./docs/contributing.md)
-
-## 🎮 Learning Mode
-
-SQL-Ball includes an interactive learning system:
-
-1. **Beginner Path**: SELECT, WHERE, JOIN basics
-2. **Intermediate Path**: Aggregations, subqueries, CTEs
-3. **Advanced Path**: Window functions, optimisation
-4. **Football Challenges**: Real-world data problems
-
-Each lesson uses actual Premier League data for practical learning.
-
-## 🚦 Roadmap
-
-### Phase 1: Core Features ✅
-- Natural language to SQL
-- Basic pattern discovery
-- Supabase integration
-
-### Phase 2: Advanced Analytics (Current)
-- Complex pattern detection
-- Visual query builder
-- Performance optimisation
-
-### Phase 3: Collaboration
-- Team workspaces
-- Query sharing
-- Community patterns
-
-### Phase 4: Enterprise
-- Custom deployments
-- Advanced security
-- API access
-
-## 🤝 Contributing
-
-We welcome contributions! SQL-Ball is built for the community. Please read our [Contributing Guide](./docs/contributing.md) before submitting PRs.
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Codecademy GenAI Bootcamp for the inspiration
-- Football-Data.co.uk for historical match data
-- The open-source community for amazing tools
-
-## 📞 Contact
-
-- **GitHub**: [SQL-Ball Repository](https://github.com/yourusername/SQL-Ball)
-- **LinkedIn**: [Connect with me](https://linkedin.com/in/yourprofile)
-- **Demo**: [Live Demo](https://sql-ball.vercel.app)
-
----
-
-**Built for the Codecademy GenAI Bootcamp Contest #1**
-
-#CodecademyGenAIBootcamp #SQL #RAG #LangChain #ChromaDB #FootballAnalytics
+Special thanks to the CodeCademy Mastering Generative AI for Developers Bootcamp for inspiring this project and providing the learning environment that led to its creation.

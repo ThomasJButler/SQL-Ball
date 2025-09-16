@@ -31,7 +31,13 @@ app = FastAPI(
 # Configure CORS for Svelte frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"],  # Vite dev and preview
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:5174", 
+        "http://localhost:4173",  # Vite dev and preview
+        "https://*.vercel.app",   # Vercel preview deployments
+        "https://sql-ball.vercel.app",  # Production domain (update with your actual domain)
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

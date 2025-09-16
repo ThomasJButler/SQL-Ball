@@ -8,7 +8,6 @@
   const sections = [
     { id: 'getting-started', title: 'Getting Started', icon: Home },
     { id: 'query-builder', title: 'Query Builder', icon: TrendingUp },
-    { id: 'pattern-discovery', title: 'Pattern Discovery', icon: Zap },
     { id: 'features', title: 'Features Guide', icon: Book },
     { id: 'data', title: 'European League Data', icon: Shield },
     { id: 'faq', title: 'FAQ', icon: HelpCircle }
@@ -70,54 +69,59 @@
               
               <div class="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl mb-8">
                 <h3 class="text-xl font-semibold mb-4">Welcome to SQL Ball!</h3>
+                <p class="mb-4">SQL-Ball transforms natural language into SQL queries using advanced RAG technology. No SQL knowledge required!</p>
                 <ol class="space-y-4">
                   <li class="flex gap-3">
                     <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">1</span>
                     <div>
-                      <strong>Explore the Dashboard</strong>
-                      <p class="text-sm mt-1">View comprehensive analytics from 22 European leagues and 7,681+ matches from the completed 2024-2025 season.</p>
+                      <strong>Set Up Your OpenAI API Key</strong>
+                      <p class="text-sm mt-1">Go to Settings and add your OpenAI API key to enable natural language processing.</p>
                     </div>
                   </li>
                   <li class="flex gap-3">
                     <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">2</span>
                     <div>
-                      <strong>Use Natural Language Queries</strong>
-                      <p class="text-sm mt-1">Ask questions in plain English using the Query Builder - powered by AI to generate SQL automatically.</p>
+                      <strong>Ask Questions in Plain English</strong>
+                      <p class="text-sm mt-1">Type questions like "Show me Liverpool's recent matches" in the Query Builder.</p>
                     </div>
                   </li>
                   <li class="flex gap-3">
                     <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</span>
                     <div>
-                      <strong>Discover Patterns</strong>
-                      <p class="text-sm mt-1">Uncover unusual statistics and hidden patterns in European football data with our Pattern Discovery engine.</p>
+                      <strong>Review and Execute SQL</strong>
+                      <p class="text-sm mt-1">SQL-Ball generates optimized SQL queries that you can review, copy, and execute.</p>
                     </div>
                   </li>
                 </ol>
               </div>
 
-              <h3 class="text-xl font-semibold mb-4">Dashboard Overview</h3>
+              <h3 class="text-xl font-semibold mb-4">Example Queries to Try</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <h4 class="font-semibold mb-2">📊 Live Standings</h4>
-                  <p class="text-sm">Current Premier League table with points, goals, and form indicators.</p>
+                  <h4 class="font-semibold mb-2">🔍 Team Performance</h4>
+                  <p class="text-sm">"Show me Liverpool's recent matches"</p>
+                  <p class="text-sm">"Find Manchester City home games"</p>
                 </div>
                 <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <h4 class="font-semibold mb-2">⚽ Upcoming Fixtures</h4>
-                  <p class="text-sm">Next matches with AI-powered predictions and confidence levels.</p>
+                  <h4 class="font-semibold mb-2">⚽ Match Analysis</h4>
+                  <p class="text-sm">"Find matches with more than 4 goals"</p>
+                  <p class="text-sm">"Show all Premier League draws"</p>
                 </div>
                 <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <h4 class="font-semibold mb-2">📈 Team Stats</h4>
-                  <p class="text-sm">Detailed performance metrics including xG, form, and trends.</p>
+                  <h4 class="font-semibold mb-2">📊 League Data</h4>
+                  <p class="text-sm">"Show all Premier League matches"</p>
+                  <p class="text-sm">"Find La Liga high-scoring games"</p>
                 </div>
                 <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <h4 class="font-semibold mb-2">🎯 Predictions</h4>
-                  <p class="text-sm">Multiple models including ELO, Poisson, and Expected Goals.</p>
+                  <h4 class="font-semibold mb-2">🏆 Head-to-Head</h4>
+                  <p class="text-sm">"Find matches between Arsenal and Chelsea"</p>
+                  <p class="text-sm">"Show Barcelona vs Real Madrid games"</p>
                 </div>
               </div>
 
               <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <p class="text-sm text-blue-800 dark:text-blue-300">
-                  Data is sourced from our Supabase database with comprehensive Premier League statistics.
+                  Data is sourced from <a href="https://www.football-data.co.uk/downloadm.php" class="underline" target="_blank">Football-Data.co.uk</a> and stored in Supabase PostgreSQL for fast querying.
                 </p>
               </div>
             </div>
@@ -127,73 +131,52 @@
               <h2 class="text-3xl font-bold mb-6 gradient-text">Query Builder Guide</h2>
               
               <div class="mb-8">
-                <h3 class="text-xl font-semibold mb-4">Our Three-Model System</h3>
+                <h3 class="text-xl font-semibold mb-4">How RAG-Powered SQL Generation Works</h3>
                 
                 <div class="space-y-6">
                   <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl">
-                    <h4 class="font-bold text-lg mb-2">🎲 ELO Rating System</h4>
-                    <p class="mb-3">Dynamic team strength ratings that adjust based on match results and opposition quality.</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
+                    <h4 class="font-bold text-lg mb-2">🧠 Retrieval-Augmented Generation (RAG)</h4>
+                    <p class="mb-3">SQL-Ball uses RAG technology to understand your questions and generate accurate SQL queries.</p>
+                    <div class="grid grid-cols-1 gap-4 text-sm">
                       <div>
-                        <strong class="text-green-600">Best for:</strong>
+                        <strong class="text-blue-600">How it works:</strong>
                         <ul class="mt-1 space-y-1">
-                          <li>• Overall team strength</li>
-                          <li>• Season-long trends</li>
-                          <li>• Head-to-head comparisons</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <strong class="text-amber-600">Limitations:</strong>
-                        <ul class="mt-1 space-y-1">
-                          <li>• Early season volatility</li>
-                          <li>• Ignores team news</li>
-                          <li>• Slow to adapt</li>
+                          <li>• Analyzes your natural language question</li>
+                          <li>• Searches database schema using vector embeddings</li>
+                          <li>• Generates contextually appropriate SQL</li>
+                          <li>• Provides explanations for learning</li>
                         </ul>
                       </div>
                     </div>
                   </div>
 
                   <div class="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl">
-                    <h4 class="font-bold text-lg mb-2">📊 Poisson Distribution</h4>
-                    <p class="mb-3">Statistical model that predicts goal probabilities based on team attacking and defensive strengths.</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
+                    <h4 class="font-bold text-lg mb-2">📊 Smart Schema Understanding</h4>
+                    <p class="mb-3">The system understands football terminology and database structure to create accurate queries.</p>
+                    <div class="grid grid-cols-1 gap-4 text-sm">
                       <div>
-                        <strong class="text-green-600">Best for:</strong>
+                        <strong class="text-green-600">Features:</strong>
                         <ul class="mt-1 space-y-1">
-                          <li>• Exact score predictions</li>
-                          <li>• Over/under goals</li>
-                          <li>• Both teams to score</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <strong class="text-amber-600">Limitations:</strong>
-                        <ul class="mt-1 space-y-1">
-                          <li>• Assumes independent events</li>
-                          <li>• Struggles with extremes</li>
-                          <li>• No tactical context</li>
+                          <li>• Recognizes team names and league codes</li>
+                          <li>• Understands match statistics and dates</li>
+                          <li>• Handles complex filtering and sorting</li>
+                          <li>• Optimizes query performance automatically</li>
                         </ul>
                       </div>
                     </div>
                   </div>
 
                   <div class="p-6 bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl">
-                    <h4 class="font-bold text-lg mb-2">⚡ Expected Goals (xG)</h4>
-                    <p class="mb-3">Advanced metric that measures the quality of chances created and conceded by teams.</p>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
+                    <h4 class="font-bold text-lg mb-2">⚡ Query Examples</h4>
+                    <p class="mb-3">Try these example queries to explore different types of football data analysis.</p>
+                    <div class="grid grid-cols-1 gap-4 text-sm">
                       <div>
-                        <strong class="text-green-600">Best for:</strong>
+                        <strong class="text-purple-600">Popular queries:</strong>
                         <ul class="mt-1 space-y-1">
-                          <li>• True performance level</li>
-                          <li>• Identifying value bets</li>
-                          <li>• Future regression</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <strong class="text-amber-600">Limitations:</strong>
-                        <ul class="mt-1 space-y-1">
-                          <li>• Requires detailed data</li>
-                          <li>• Ignores finishing quality</li>
-                          <li>• Complex to understand</li>
+                          <li>• "Show me Liverpool's recent matches"</li>
+                          <li>• "Find matches with more than 4 total goals"</li>
+                          <li>• "Show matches where home team won"</li>
+                          <li>• "Find all draws in the Premier League"</li>
                         </ul>
                       </div>
                     </div>
@@ -202,65 +185,21 @@
               </div>
 
               <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-xl">
-                <h3 class="text-lg font-semibold mb-3">Reading Prediction Confidence</h3>
-                <div class="space-y-2">
+                <h3 class="text-lg font-semibold mb-3">Tips for Better Results</h3>
+                <div class="space-y-2 text-sm">
                   <div class="flex items-center gap-3">
                     <div class="w-4 h-4 bg-green-500 rounded-full"></div>
-                    <span><strong>High (75%+)</strong> - All models agree strongly</span>
+                    <span><strong>Be specific:</strong> Include team names, leagues, or time periods</span>
                   </div>
                   <div class="flex items-center gap-3">
-                    <div class="w-4 h-4 bg-yellow-500 rounded-full"></div>
-                    <span><strong>Medium (60-75%)</strong> - Moderate agreement</span>
+                    <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
+                    <span><strong>Use natural language:</strong> Ask as if talking to a person</span>
                   </div>
                   <div class="flex items-center gap-3">
-                    <div class="w-4 h-4 bg-red-500 rounded-full"></div>
-                    <span><strong>Low (&lt;60%)</strong> - Models disagree</span>
+                    <div class="w-4 h-4 bg-purple-500 rounded-full"></div>
+                    <span><strong>Review generated SQL:</strong> Learn from the queries created</span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-          {:else if selectedSection === 'maximizing'}
-            <div class="prose prose-slate dark:prose-invert max-w-none">
-              <h2 class="text-3xl font-bold mb-6 gradient-text">Maximizing Prediction Accuracy</h2>
-              
-              <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-6 rounded-xl mb-8">
-                <h3 class="text-xl font-semibold mb-4">🎯 The Golden Rules</h3>
-                <ol class="space-y-3">
-                  <li><strong>1. Consensus is Key:</strong> When all three models agree, accuracy jumps to 75-85%</li>
-                  <li><strong>2. Context Matters:</strong> Always check team news, injuries, and motivation</li>
-                  <li><strong>3. Value Over Volume:</strong> Better to skip than force a prediction</li>
-                  <li><strong>4. Track Everything:</strong> Learn from both wins and losses</li>
-                  <li><strong>5. Stay Disciplined:</strong> Never chase losses or bet emotionally</li>
-                </ol>
-              </div>
-
-              <h3 class="text-xl font-semibold mb-4">Advanced Strategies</h3>
-              
-              <div class="grid gap-4 mb-8">
-                <div class="p-4 border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                  <h4 class="font-semibold mb-2">The Fatigue Factor</h4>
-                  <p class="text-sm">Teams playing their 3rd match in 7 days see a 15% drop in win probability. Target them with opposing bets.</p>
-                </div>
-                
-                <div class="p-4 border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20">
-                  <h4 class="font-semibold mb-2">The Bounce-Back Effect</h4>
-                  <p class="text-sm">Teams typically overperform after heavy defeats (3+ goals). Back them against weaker opposition.</p>
-                </div>
-                
-                <div class="p-4 border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-900/20">
-                  <h4 class="font-semibold mb-2">New Manager Bounce</h4>
-                  <p class="text-sm">First 5 games show +15% win rate improvement. Fade after game 10 when reality sets in.</p>
-                </div>
-              </div>
-
-              <h3 class="text-xl font-semibold mb-4">Kelly Criterion Calculator</h3>
-              <div class="p-6 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <p class="mb-4">Use our Kelly Calculator to determine optimal stake sizes:</p>
-                <div class="bg-white dark:bg-slate-900 p-4 rounded-lg font-mono text-sm">
-                  Stake % = (Probability × Odds - 1) / (Odds - 1)
-                </div>
-                <p class="text-sm mt-4 text-amber-600">⚠️ Never bet more than 25% of Kelly recommendation for safety.</p>
               </div>
             </div>
 
@@ -270,122 +209,145 @@
               
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">📊 Dashboard</h3>
-                  <p class="text-sm mb-3">Your command center for all Premier League data and predictions.</p>
+                  <h3 class="font-bold text-lg mb-3">🤖 Natural Language Processing</h3>
+                  <p class="text-sm mb-3">Ask questions in plain English and get SQL queries automatically.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Live standings</li>
-                    <li>• Upcoming fixtures</li>
-                    <li>• Recent results</li>
-                    <li>• Team performance metrics</li>
+                    <li>• Powered by OpenAI GPT models</li>
+                    <li>• Context-aware query generation</li>
+                    <li>• Handles complex football terminology</li>
+                    <li>• Real-time SQL generation</li>
                   </ul>
                 </div>
                 
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">🔮 Predictions</h3>
-                  <p class="text-sm mb-3">Advanced statistical models for match outcome predictions.</p>
+                  <h3 class="font-bold text-lg mb-3">📊 RAG Technology</h3>
+                  <p class="text-sm mb-3">Advanced retrieval system for accurate database querying.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Three-model consensus</li>
-                    <li>• Confidence ratings</li>
-                    <li>• Expected scores</li>
-                    <li>• Head-to-head history</li>
+                    <li>• Vector-based schema search</li>
+                    <li>• ChromaDB embeddings</li>
+                    <li>• LangChain integration</li>
+                    <li>• Contextual query optimization</li>
                   </ul>
                 </div>
                 
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">📈 Kelly Calculator</h3>
-                  <p class="text-sm mb-3">Optimize your stake sizes using the Kelly Criterion formula.</p>
+                  <h3 class="font-bold text-lg mb-3">🔍 Query Builder</h3>
+                  <p class="text-sm mb-3">Interactive interface for building and executing SQL queries.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Input odds and probability</li>
-                    <li>• Get recommended stake</li>
-                    <li>• Adjust for risk tolerance</li>
-                    <li>• Track bankroll growth</li>
+                    <li>• Example query suggestions</li>
+                    <li>• SQL syntax highlighting</li>
+                    <li>• Copy and execute functionality</li>
+                    <li>• Query explanation and confidence</li>
                   </ul>
                 </div>
                 
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">💎 Value Bets</h3>
-                  <p class="text-sm mb-3">Identify opportunities where odds exceed true probability.</p>
+                  <h3 class="font-bold text-lg mb-3">📈 Data Visualization</h3>
+                  <p class="text-sm mb-3">View query results in formatted tables and charts.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Automatic value detection</li>
-                    <li>• Expected ROI calculation</li>
-                    <li>• Risk assessment</li>
-                    <li>• Historical performance</li>
+                    <li>• Responsive data tables</li>
+                    <li>• Export functionality</li>
+                    <li>• Result pagination</li>
+                    <li>• Mobile-friendly display</li>
                   </ul>
                 </div>
                 
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">🤖 AI Assistant</h3>
-                  <p class="text-sm mb-3">Get intelligent insights and explanations for predictions.</p>
+                  <h3 class="font-bold text-lg mb-3">⚽ Football Data</h3>
+                  <p class="text-sm mb-3">Comprehensive European football match database.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Natural language queries</li>
-                    <li>• Statistical explanations</li>
-                    <li>• Trend analysis</li>
-                    <li>• Custom recommendations</li>
+                    <li>• Multiple league coverage</li>
+                    <li>• Historical match data</li>
+                    <li>• Team and player statistics</li>
+                    <li>• Regular data updates</li>
                   </ul>
                 </div>
                 
                 <div class="glass-card p-6">
-                  <h3 class="font-bold text-lg mb-3">📱 Mobile Features</h3>
-                  <p class="text-sm mb-3">Full functionality on all devices with responsive design.</p>
+                  <h3 class="font-bold text-lg mb-3">🛡️ Privacy & Security</h3>
+                  <p class="text-sm mb-3">Your data and API keys are kept secure and private.</p>
                   <ul class="text-sm space-y-1">
-                    <li>• Swipe navigation</li>
-                    <li>• Touch-optimized controls</li>
-                    <li>• Offline caching</li>
-                    <li>• Push notifications</li>
+                    <li>• Local API key storage</li>
+                    <li>• No data collection</li>
+                    <li>• Open source codebase</li>
+                    <li>• Secure data handling</li>
                   </ul>
                 </div>
               </div>
             </div>
 
-          {:else if selectedSection === 'security'}
+          {:else if selectedSection === 'data'}
             <div class="prose prose-slate dark:prose-invert max-w-none">
-              <h2 class="text-3xl font-bold mb-6 gradient-text">Privacy & Security</h2>
+              <h2 class="text-3xl font-bold mb-6 gradient-text">European League Data</h2>
               
-              <div class="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl mb-8">
-                <h3 class="text-xl font-semibold mb-4">🔒 Your Data is Safe</h3>
-                <p class="mb-4">We take your privacy seriously. Here's how we protect your information:</p>
-                <ul class="space-y-2">
-                  <li class="flex items-start gap-3">
-                    <Shield class="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <strong>Local Storage Only</strong>
-                      <p class="text-sm">Your API key is stored locally in your browser, never on our servers.</p>
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <Shield class="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <strong>No Data Collection</strong>
-                      <p class="text-sm">We don't track, store, or analyze your personal data or usage patterns.</p>
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <Shield class="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <strong>Direct API Calls</strong>
-                      <p class="text-sm">All data comes directly from Football-Data.org, bypassing our servers.</p>
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <Shield class="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <strong>Open Source</strong>
-                      <p class="text-sm">Our code is publicly available for security audits and transparency.</p>
-                    </div>
-                  </li>
-                </ul>
+              <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl mb-8">
+                <h3 class="text-xl font-semibold mb-4">📊 Data Source</h3>
+                <p class="mb-4">All football match data is sourced from <a href="https://www.football-data.co.uk/downloadm.php" class="text-blue-600 dark:text-blue-400 underline" target="_blank">Football-Data.co.uk</a>, a comprehensive database of European football statistics.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  <div>
+                    <h4 class="font-semibold mb-2">Leagues Covered:</h4>
+                    <ul class="text-sm space-y-1">
+                      <li>• E0 - Premier League (England)</li>
+                      <li>• SP1 - La Liga (Spain)</li>
+                      <li>• I1 - Serie A (Italy)</li>
+                      <li>• D1 - Bundesliga (Germany)</li>
+                      <li>• F1 - Ligue 1 (France)</li>
+                      <li>• And many more European leagues</li>
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 class="font-semibold mb-2">Data Includes:</h4>
+                    <ul class="text-sm space-y-1">
+                      <li>• Match results and scores</li>
+                      <li>• Home/away team information</li>
+                      <li>• Match dates and times</li>
+                      <li>• League classifications</li>
+                      <li>• Historical match data</li>
+                      <li>• Standardized team names</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
-              <h3 class="text-xl font-semibold mb-4">API Key Security</h3>
-              <div class="p-6 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                <h4 class="font-semibold mb-3">Best Practices:</h4>
-                <ul class="space-y-2 text-sm">
-                  <li>✅ Use a dedicated API key for this app</li>
-                  <li>✅ Rotate keys periodically</li>
-                  <li>✅ Never share your API key</li>
-                  <li>✅ Monitor usage in Football-Data.org dashboard</li>
-                  <li>✅ Report any suspicious activity immediately</li>
-                </ul>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <h4 class="font-semibold mb-2">🏆 Database Schema</h4>
+                  <p class="text-sm mb-2">The matches table contains:</p>
+                  <ul class="text-sm space-y-1">
+                    <li>• id - unique match identifier</li>
+                    <li>• match_date - when the match occurred</li>
+                    <li>• home_team - home team name</li>
+                    <li>• away_team - away team name</li>
+                    <li>• home_score - home team goals</li>
+                    <li>• away_score - away team goals</li>
+                    <li>• result - H/A/D (home/away/draw)</li>
+                    <li>• div - league division code</li>
+                  </ul>
+                </div>
+                
+                <div class="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <h4 class="font-semibold mb-2">🔄 Data Processing</h4>
+                  <p class="text-sm mb-2">Our system processes the data by:</p>
+                  <ul class="text-sm space-y-1">
+                    <li>• Importing from Football-Data.co.uk</li>
+                    <li>• Storing in Supabase PostgreSQL</li>
+                    <li>• Creating vector embeddings</li>
+                    <li>• Optimizing for query performance</li>
+                    <li>• Regular updates and maintenance</li>
+                    <li>• Quality checks and validation</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <h4 class="font-semibold mb-2">✨ RAG Enhancement</h4>
+                <p class="text-sm">
+                  The raw data is enhanced with a Python backend that connects to Supabase and performs 
+                  RAG (Retrieval-Augmented Generation) processing. This enables natural language queries 
+                  to be converted into accurate SQL statements using advanced AI technology.
+                </p>
               </div>
             </div>
 
@@ -395,43 +357,43 @@
               
               <div class="space-y-6">
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">How accurate are the predictions?</h3>
-                  <p>Our models achieve 60-65% accuracy on average, with high-confidence predictions reaching 75-85% accuracy when all models agree.</p>
+                  <h3 class="font-semibold text-lg mb-2">How does the natural language to SQL work?</h3>
+                  <p>SQL-Ball uses advanced RAG (Retrieval-Augmented Generation) technology with OpenAI's GPT models to understand your questions and generate accurate SQL queries based on our football database schema.</p>
+                </div>
+                
+                <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                  <h3 class="font-semibold text-lg mb-2">Do I need to know SQL to use this?</h3>
+                  <p>No! That's the whole point of SQL-Ball. You can ask questions in plain English like "Show me Liverpool's recent matches" and the system will generate the appropriate SQL query for you.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
                   <h3 class="font-semibold text-lg mb-2">Is this app free to use?</h3>
-                  <p>Yes! The app is completely free. You just need a free API key from Football-Data.org, which includes 10 requests per minute.</p>
+                  <p>The app itself is free! You just need to provide your own OpenAI API key to enable the natural language processing. OpenAI offers free credits to new users.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">Why am I seeing "Rate Limit Exceeded" errors?</h3>
-                  <p>The free API tier allows 10 requests per minute. Wait 60 seconds and try again, or consider upgrading your API plan for more requests.</p>
+                  <h3 class="font-semibold text-lg mb-2">What football leagues are included?</h3>
+                  <p>We include data from major European leagues including Premier League (E0), La Liga (SP1), Serie A (I1), Bundesliga (D1), Ligue 1 (F1), and many others sourced from Football-Data.co.uk.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">Can I use this for betting?</h3>
-                  <p>The app provides statistical analysis for research and entertainment. Any betting decisions are your responsibility. Always gamble responsibly.</p>
+                  <h3 class="font-semibold text-lg mb-2">How recent is the data?</h3>
+                  <p>The database contains historical match data from Football-Data.co.uk. The exact range depends on what's available in the source dataset, typically covering multiple recent seasons.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">How often is data updated?</h3>
-                  <p>Match data updates in real-time during games. Statistics and predictions refresh every 5 minutes when you're using the app.</p>
+                  <h3 class="font-semibold text-lg mb-2">Can I see the generated SQL?</h3>
+                  <p>Yes! SQL-Ball shows you the generated SQL query so you can learn and understand how your natural language question was converted. You can copy, modify, or study the SQL.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">Does it work offline?</h3>
-                  <p>The app caches recent data for offline viewing, but requires an internet connection for live updates and new predictions.</p>
+                  <h3 class="font-semibold text-lg mb-2">Is my OpenAI API key safe?</h3>
+                  <p>Your API key is stored locally in your browser and never sent to our servers. It's only used to communicate directly with OpenAI's API for query generation.</p>
                 </div>
                 
                 <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">Can I export the data?</h3>
-                  <p>Currently, you can copy data from tables. Full export functionality is planned for a future update.</p>
-                </div>
-                
-                <div class="p-6 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                  <h3 class="font-semibold text-lg mb-2">Will you add other leagues?</h3>
-                  <p>We're focusing on perfecting Premier League predictions first. Other leagues are on our roadmap for future versions.</p>
+                  <h3 class="font-semibold text-lg mb-2">What if the generated SQL is wrong?</h3>
+                  <p>While the RAG system is highly accurate, AI can sometimes make mistakes. Always review the generated SQL before executing. You can also try rephrasing your question for better results.</p>
                 </div>
               </div>
             </div>

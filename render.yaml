@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: sql-ball-backend
+    runtime: python
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+    plan: starter
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false  # Set this manually in Render dashboard
+      - key: ENVIRONMENT
+        value: production
+      - key: CHROMA_PERSIST_DIRECTORY
+        value: /opt/render/project/backend/chroma_db
+      - key: CHROMA_COLLECTION_NAME
+        value: sql_ball_schema
+    disk:
+      name: chroma-data
+      mountPath: /opt/render/project/backend/chroma_db
+      sizeGB: 1
+
+  # Optional: Add a background service for ChromaDB if needed
+  # - type: background
+  #   name: chroma-db
+  #   runtime: python
+  #   buildCommand: "cd backend && pip install chromadb"
+  #   startCommand: "cd backend && python start_chromadb.py"
+  #   plan: starter
+  #   region: oregon
+  #   branch: main
