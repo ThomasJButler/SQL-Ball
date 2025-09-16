@@ -1,6 +1,5 @@
 // import { supabase } from '../lib/supabase'; // Removed Supabase dependency
 import { dataService } from './dataService';
-import { footballDataAPI } from './api/footballData';
 
 interface AIMessage {
   role: 'system' | 'user' | 'assistant';

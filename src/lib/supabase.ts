@@ -115,15 +115,64 @@ export async function executeSQL(query: string): Promise<any> {
   if (!hasValidSupabaseConfig()) {
     throw new Error('Database connection not configured. Please add your Supabase credentials to the .env file.');
   }
-  
+
   // For security, this should be a server-side function
   // or use Supabase RPC with proper validation
-  const { data, error } = await supabase.rpc('execute_sql', { 
-    query_text: query 
+  const { data, error } = await supabase.rpc('execute_sql', {
+    query_text: query
   });
 
   if (error) throw error;
   return data;
+}
+
+export async function getTopScorers(season: string = '2024-2025', limit: number = 10): Promise<any[]> {
+  if (!hasValidSupabaseConfig()) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('player_stats')
+    .select(`
+      player_id,
+      goals_scored,
+      assists,
+      expected_goals,
+      minutes,
+      players!inner(web_name, first_name, second_name, position)
+    `)
+    .eq('season', season)
+    .order('goals_scored', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching top scorers:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function getPlayerStats(season: string = '2024-2025'): Promise<any[]> {
+  if (!hasValidSupabaseConfig()) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('player_stats')
+    .select(`
+      *,
+      players!inner(web_name, first_name, second_name, position, team_code)
+    `)
+    .eq('season', season)
+    .order('total_points', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching player stats:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 // Demo data for when Supabase is not configured

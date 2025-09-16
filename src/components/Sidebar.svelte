@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LayoutDashboard, List, BarChart3, History, Bot, Settings, LogOut, Search, Database, Brain, HelpCircle, Trophy, Tv, User, Sparkles } from 'lucide-svelte';
+  import { LayoutDashboard, BarChart3, Bot, Settings, LogOut, Search, FileText, HelpCircle, Trophy, User, Sparkles } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let currentView: string;
@@ -14,10 +14,8 @@
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, view: 'Dashboard' },
     { name: 'Query Builder', icon: Search, view: 'Query Builder' },
+    { name: 'Submit Query', icon: FileText, view: 'Submit Query' },
     { name: 'Pattern Discovery', icon: Sparkles, view: 'Pattern Discovery' },
-    { name: 'SQL Explorer', icon: Database, view: 'SQL Explorer' },
-    { name: 'Live Matches', icon: Tv, view: 'Live Matches' },
-    { name: 'Matches', icon: List, view: 'Matches' },
     { name: 'Season Stats', icon: BarChart3, view: 'Season Stats' },
     { name: 'Top Scorers', icon: Trophy, view: 'Top Scorers' },
     { name: 'Player Profile', icon: User, view: 'Player Profile' },

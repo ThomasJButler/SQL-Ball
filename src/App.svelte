@@ -3,28 +3,23 @@
   import Sidebar from './components/Sidebar.svelte';
   import MobileNav from './components/MobileNav.svelte';
   import Dashboard from './components/Dashboard.svelte';
-  import MatchList from './components/MatchList.svelte';
   import QueryBuilder from './components/QueryBuilder.svelte';
+  import SubmitQuery from './components/SubmitQuery.svelte';
   import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
   import LiveTicker from './components/LiveTicker.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
   import Settings from './components/Settings.svelte';
-  import ApiSetupWizard from './components/ApiSetupWizard.svelte';
   import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
   import Help from './components/Help.svelte';
   import TopScorers from './components/TopScorers.svelte';
-  import LiveMatches from './components/LiveMatches.svelte';
   import PlayerProfile from './components/PlayerProfile.svelte';
-  import VisualQueryBuilder from './components/VisualQueryBuilder.svelte';
   import { onMount } from 'svelte';
 
   let currentView = 'Dashboard'; // Default view
   let isSidebarOpen = false; // Start with sidebar closed
   let isTransitioning = false;
-  let showApiSetup = false;
   let showOpenAISetup = false;
-  let hasApiKey = false;
   let hasOpenAIKey = false;
   let dashboardComponent: Dashboard;
   
@@ -58,35 +53,8 @@
     if (!hasOpenAIKey) {
       showOpenAISetup = true;
     }
-
-    // Check for Football-Data API key (deprecated but kept for compatibility)
-    checkApiKey();
   });
 
-  function checkApiKey() {
-    const apiKey = localStorage.getItem('football_data_api_key');
-    hasApiKey = !!apiKey;
-    
-    // Disabled for testing - using Supabase instead of Football-Data API
-    // Show setup wizard if no API key found
-    // if (!hasApiKey) {
-    //   showApiSetup = true;
-    // }
-  }
-
-  async function handleApiSetupComplete(event: CustomEvent<{ apiKey: string }>) {
-    hasApiKey = true;
-    showApiSetup = false;
-
-    console.log('✅ API key setup completed (deprecated - using Supabase)');
-
-    // Refresh dashboard if it's currently loaded
-    if (currentView === 'Dashboard' && dashboardComponent) {
-      setTimeout(() => {
-        dashboardComponent.refresh();
-      }, 100);
-    }
-  }
 
 </script>
 
@@ -123,14 +91,12 @@
       <div class="page-content" class:transitioning={isTransitioning}>
         {#if currentView === 'Dashboard'}
           <Dashboard bind:this={dashboardComponent} />
-        {:else if currentView === 'Matches'}
-          <MatchList />
         {:else if currentView === 'Query Builder'}
           <QueryBuilder />
+        {:else if currentView === 'Submit Query'}
+          <SubmitQuery />
         {:else if currentView === 'Pattern Discovery'}
           <PatternDiscovery />
-        {:else if currentView === 'SQL Explorer'}
-          <VisualQueryBuilder />
         {:else if currentView === 'AI Assistant'}
           <AiAssistant />
         {:else if currentView === 'Season Stats'}
@@ -141,8 +107,6 @@
           <Help />
         {:else if currentView === 'Top Scorers'}
           <TopScorers />
-        {:else if currentView === 'Live Matches'}
-          <LiveMatches />
         {:else if currentView === 'Player Profile'}
           <PlayerProfile />
         {/if}
@@ -194,10 +158,6 @@
     </div>
   </div>
 
-  <!-- API Setup Wizard -->
-  {#if showApiSetup}
-    <ApiSetupWizard on:complete={handleApiSetupComplete} />
-  {/if}
 </div>
 
 <style global lang="postcss">
