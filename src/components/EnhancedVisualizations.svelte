@@ -49,15 +49,15 @@
     { value: 'last90', label: 'Last 90 Days' },
     { value: 'thisMonth', label: 'This Month' },
     { value: 'lastMonth', label: 'Last Month' },
-    { value: '2024-2025', label: '2024-2025 Season (Current)' }
+    { value: '2024-2025', label: '2024-2025 Season (Completed)' }
   ];
 
-  // Seasonal periods for 2024-2025 (current season)
+  // Seasonal periods for 2024-2025 (completed season - we're in Sept 2025!)
   const seasonalPeriods = [
-    { value: 'summer-2024', label: 'Summer 2024', icon: '☀️' },
-    { value: 'autumn-2024', label: 'Autumn 2024 (Current)', icon: '🍂' },
-    { value: 'winter-2025', label: 'Winter 2025', icon: '❄️' },
-    { value: 'spring-2025', label: 'Spring 2025', icon: '🌸' }
+    { value: 'summer-2024', label: '☀️ Summer 2024', icon: '☀️' },
+    { value: 'autumn-2024', label: '🍂 Autumn 2024', icon: '🍂' },
+    { value: 'winter-2025', label: '❄️ Winter 2025', icon: '❄️' },
+    { value: 'spring-2025', label: '🌸 Spring 2025', icon: '🌸' }
   ];
 
   // Filter matches based on date range

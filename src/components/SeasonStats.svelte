@@ -44,6 +44,7 @@
   async function loadSeasonStats() {
     try {
       loading = true;
+      console.log('Loading season stats for', selectedSeason);
 
       // Fetch matches from Supabase
       const { data, error } = await supabase
@@ -51,15 +52,24 @@
         .select('*')
         .eq('season', selectedSeason)
         .not('home_score', 'is', null)
-        .order('match_date', { ascending: false });
+        .not('away_score', 'is', null)
+        .order('match_date', { ascending: false })
+        .limit(500);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       matches = data || [];
+      console.log('Loaded', matches.length, 'matches for season', selectedSeason);
 
       if (matches.length > 0) {
         stats = calculateInterestingStats(matches);
         teamStats = calculateTeamStats(matches);
+        console.log('Calculated stats:', stats.length, 'and team stats:', teamStats.length);
+      } else {
+        console.warn('No matches found for season', selectedSeason);
       }
     } catch (error) {
       console.error('Error loading season stats:', error);

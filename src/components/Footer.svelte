@@ -8,9 +8,7 @@
       <!-- Left side - Brand and copyright -->
       <div class="flex flex-col items-center md:items-start gap-2">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-            <span class="text-white font-bold text-sm">SB</span>
-          </div>
+          <img src="/football.svg" alt="SQL Ball" class="w-6 h-6" />
           <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">SQL-Ball</span>
         </div>
         <p class="text-xs text-slate-500 dark:text-slate-400">
