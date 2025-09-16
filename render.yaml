@@ -9,8 +9,6 @@ services:
     branch: main
     healthCheckPath: /health
     envVars:
-      - key: PORT
-        generateValue: true
       - key: OPENAI_API_KEY
         sync: false  # Set this manually in Render dashboard
       - key: ENVIRONMENT
