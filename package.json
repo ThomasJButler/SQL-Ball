@@ -46,12 +46,13 @@
     "chromadb-default-embed": "^2.14.0",
     "csv-parser": "^3.2.0",
     "date-fns": "^2.30.0",
-    "dotenv": "^17.2.2",
+    "dotenv": "^16.4.5",
     "lucide-svelte": "^0.503.0",
     "openai": "^5.20.2",
     "svelte-chartjs": "^3.1.2"
   },
   "overrides": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "dotenv": "^16.4.5"
   }
 }
