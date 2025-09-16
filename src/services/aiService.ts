@@ -1,4 +1,3 @@
-// import { supabase } from '../lib/supabase'; // Removed Supabase dependency
 import { dataService } from './dataService';
 
 interface AIMessage {
@@ -136,24 +135,11 @@ ${awayWinBar}
   
   private async getMatchContext(): Promise<string> {
     try {
-      // Check data source
-      const dataStatus = dataService.getStatus();
-      const isUsingAPI = dataStatus.primarySource.available && dataStatus.primarySource.type === 'api';
-      
-      // Get recent matches and upcoming fixtures from dataService (API first, then fallback)
+      // Get recent matches and upcoming fixtures from dataService
       const [recentMatches, upcomingMatches] = await Promise.all([
         dataService.getMatches({ recent: true, days: 7 }),
         dataService.getMatches({ upcoming: true, days: 7 })
       ]);
-      
-      // Get standings (from API if available)
-      let standings: any[] = [];
-      if (isUsingAPI) {
-        standings = await footballDataAPI.getStandings();
-      } else {
-        // No fallback available - API only
-        standings = [];
-      }
       
       // Build context with current date and data source
       const today = new Date();
@@ -166,39 +152,20 @@ ${awayWinBar}
       
       let context = `Current Premier League Context:\n`;
       context += `Today's Date: ${todayStr}\n`;
-      context += `Data Source: ${isUsingAPI ? 'Live API (Football-Data.org)' : 'Database (Cached)'}\n\n`;
+      context += `Data Source: Database (Supabase)\n\n`;
       
-      // Add standings
-      if (standings && standings.length > 0) {
-        context += 'Current Standings:\n';
-        
-        if (isUsingAPI) {
-          // API format
-          standings.slice(0, 10).forEach((standing: any) => {
-            context += `${standing.position}. ${standing.team.name}: ${standing.points} pts `;
-            context += `(P${standing.playedGames} W${standing.won} D${standing.draw} L${standing.lost} `;
-            context += `GD${standing.goalDifference > 0 ? '+' : ''}${standing.goalDifference})\n`;
-          });
-        } else {
-          // Database format
-          standings.slice(0, 10).forEach((team: any, idx: number) => {
-            context += `${idx + 1}. ${team.team_name}: ${team.points} pts `;
-            context += `(W${team.wins} D${team.draws} L${team.losses})\n`;
-          });
-        }
-        context += '\n';
-      }
+      // Standings would be available here if we had API access
       
       // Add recent results
       if (recentMatches && recentMatches.length > 0) {
         context += 'Recent Results (Last 7 days):\n';
         recentMatches.slice(0, 10).forEach(match => {
-          if (match.home_goals !== null && match.away_goals !== null) {
+          if (match.home_score !== null && match.away_score !== null) {
             const date = new Date(match.date).toLocaleDateString('en-GB', {
               day: 'numeric',
               month: 'short'
             });
-            context += `${date}: ${match.home_team} ${match.home_goals}-${match.away_goals} ${match.away_team}\n`;
+            context += `${date}: ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}\n`;
           }
         });
         context += '\n';
@@ -275,8 +242,8 @@ ${awayWinBar}
 ${matchContext}
 
 You have access to comprehensive Premier League data including:
-- Live fixtures and results from Football-Data.org API
-- Current league standings and team statistics
+- Historical match results from Supabase database
+- Team and match statistics
 - Historical match results and performance metrics
 - Expected Goals (xG) data and predictions
 - Head-to-head records
