@@ -36,7 +36,7 @@
   );
 
   export let matches: Match[] = [];
-  export let selectedDateRange: string = 'last30';
+  export let selectedDateRange: string = '2024-2025';
   export let selectedSeason: string = '2024-2025';
 
   let filteredMatches: Match[] = [];
@@ -49,14 +49,13 @@
     { value: 'last90', label: 'Last 90 Days' },
     { value: 'thisMonth', label: 'This Month' },
     { value: 'lastMonth', label: 'Last Month' },
-    { value: '2024-2025', label: '2024-2025 Season' },
-    { value: '2025-2026', label: '2025-2026 Season' }
+    { value: '2024-2025', label: '2024-2025 Season (Current)' }
   ];
 
-  // Seasonal periods for 2024-2025
+  // Seasonal periods for 2024-2025 (current season)
   const seasonalPeriods = [
     { value: 'summer-2024', label: 'Summer 2024', icon: '☀️' },
-    { value: 'autumn-2024', label: 'Autumn 2024', icon: '🍂' },
+    { value: 'autumn-2024', label: 'Autumn 2024 (Current)', icon: '🍂' },
     { value: 'winter-2025', label: 'Winter 2025', icon: '❄️' },
     { value: 'spring-2025', label: 'Spring 2025', icon: '🌸' }
   ];
@@ -89,10 +88,6 @@
         startDate = new Date('2024-08-01');
         endDate = new Date('2025-05-31');
         break;
-      case '2025-2026':
-        startDate = new Date('2025-08-01');
-        endDate = new Date('2026-05-31');
-        break;
       // Seasonal periods
       case 'summer-2024':
         startDate = new Date('2024-06-01');
@@ -115,14 +110,14 @@
     }
 
     filteredMatches = matches.filter(m => {
-      const matchDate = new Date(m.date);
+      const matchDate = new Date(m.match_date);
       return matchDate >= startDate && matchDate <= endDate;
     });
   }
 
   // Goals Over Time Chart
   $: goalsOverTimeData = (() => {
-    const labels = filteredMatches.slice(-10).map(m => format(new Date(m.date), 'MMM dd'));
+    const labels = filteredMatches.slice(-10).map(m => format(new Date(m.match_date), 'MMM dd'));
     const homeGoals = filteredMatches.slice(-10).map(m => m.home_score || 0);
     const awayGoals = filteredMatches.slice(-10).map(m => m.away_score || 0);
 
@@ -355,45 +350,24 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Date Range Selector -->
-  <div class="space-y-4">
-    <!-- Standard Date Ranges -->
-    <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
-      <Calendar class="w-5 h-5 text-green-500" />
-      <div class="flex flex-wrap gap-2">
-        {#each dateRanges as range}
-          <button
-            on:click={() => selectedDateRange = range.value}
-            class="px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
-              selectedDateRange === range.value
-                ? 'bg-green-500 text-black shadow-lg shadow-green-500/30'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
-            }"
-          >
-            {range.label}
-          </button>
-        {/each}
-      </div>
-    </div>
-
-    <!-- Seasonal Periods -->
-    <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
-      <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">2024-25 Seasons:</span>
-      <div class="flex flex-wrap gap-2">
-        {#each seasonalPeriods as period}
-          <button
-            on:click={() => selectedDateRange = period.value}
-            class="flex items-center gap-2 px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
-              selectedDateRange === period.value
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
-            }"
-          >
-            <span>{period.icon}</span>
-            <span>{period.label}</span>
-          </button>
-        {/each}
-      </div>
+  <!-- Seasonal Periods Selector -->
+  <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
+    <Calendar class="w-5 h-5 text-green-500" />
+    <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">2024-25 Season:</span>
+    <div class="flex flex-wrap gap-2">
+      {#each seasonalPeriods as period}
+        <button
+          on:click={() => selectedDateRange = period.value}
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
+            selectedDateRange === period.value
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
+              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+          }"
+        >
+          <span>{period.icon}</span>
+          <span>{period.label}</span>
+        </button>
+      {/each}
     </div>
   </div>
 
