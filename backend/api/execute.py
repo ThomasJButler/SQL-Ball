@@ -108,6 +108,11 @@ async def execute_sql_query(request: ExecuteRequest):
                 status_code=403,
                 detail="Database permission denied - check your query"
             )
+        elif "season =" in clean_sql and clean_sql.count("season =") > 1:
+            raise HTTPException(
+                status_code=400,
+                detail="SQL Error: Query contains conflicting season conditions - a row cannot match multiple seasons simultaneously"
+            )
         else:
             raise HTTPException(
                 status_code=500,

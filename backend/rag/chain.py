@@ -41,7 +41,7 @@ class SQLChain:
             - player_stats: id, player_id, gameweek, total_points, goals_scored, assists, expected_goals, form, season
             - player_match_stats: id, player_id, gameweek, minutes_played, goals, assists, xg, xa, season
 
-            Available seasons: '2024-2025', '2025-2026'
+            Available seasons (choose ONE per query unless explicitly asked for cross-season analysis): '2024-2025', '2025-2026'
 
             Football terminology mappings:
             {football_mappings}
@@ -59,6 +59,8 @@ class SQLChain:
             7. CRITICAL: SQL clause order MUST be: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT
             8. NEVER put WHERE after GROUP BY - WHERE must come BEFORE GROUP BY
             9. When using aggregates (SUM, COUNT, AVG), GROUP BY is required for non-aggregate columns
+            10. CRITICAL: Use only ONE season per query - do NOT use multiple season conditions like 'season = A AND season = B'
+            11. If no specific season mentioned in question, use the season parameter provided in the request
 
             Generate only the SQL query, no explanations."""),
             ("user", "{question}")
@@ -112,6 +114,9 @@ class SQLChain:
         # Add season filter if not present and needed
         if hints.get("needs_season") and season not in sql:
             sql = self._add_season_filter(sql, season)
+
+        # Validate season usage - ensure request season is used
+        sql = self._validate_season_usage(sql, season)
 
         # Execute query
         results = await self._execute_query(sql)
@@ -223,11 +228,34 @@ class SQLChain:
         # Look for impossible conditions like season = 'A' AND season = 'B'
         season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
         if len(season_matches) > 1 and len(set(season_matches)) > 1:
-            # Multiple different seasons found - keep only the first one
-            first_season = season_matches[0]
-            sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{first_season}'", sql, flags=re.IGNORECASE)
-            # Remove duplicate AND clauses
-            sql = re.sub(r"\bAND\s+season\s*=\s*['\"][^'\"]+['\"]", "", sql, flags=re.IGNORECASE)
+            print(f"🔧 FIXING: Found conflicting seasons: {season_matches}")
+
+            # Keep only the first season occurrence and remove all others
+            first_match = re.search(r"season\s*=\s*['\"][^'\"]+['\"]", sql, re.IGNORECASE)
+            if first_match:
+                first_season_clause = first_match.group(0)
+                # Remove all season clauses first
+                sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", "", sql, flags=re.IGNORECASE)
+                # Clean up extra AND/WHERE keywords left behind
+                sql = re.sub(r"\bAND\s+AND\b", "AND", sql, flags=re.IGNORECASE)
+                sql = re.sub(r"\bWHERE\s+AND\b", "WHERE", sql, flags=re.IGNORECASE)
+                sql = re.sub(r"\bAND\s+$", "", sql.strip(), flags=re.IGNORECASE)
+
+                # Add back the first season clause in the right place
+                if "WHERE" in sql.upper():
+                    # Insert after WHERE
+                    sql = re.sub(r"\bWHERE\b", f"WHERE {first_season_clause} AND", sql, count=1, flags=re.IGNORECASE)
+                else:
+                    # Add WHERE clause before GROUP BY/ORDER BY/LIMIT
+                    insert_pos = len(sql)
+                    for clause in ["GROUP BY", "ORDER BY", "LIMIT"]:
+                        match = re.search(rf"\b{clause}\b", sql, re.IGNORECASE)
+                        if match:
+                            insert_pos = min(insert_pos, match.start())
+
+                    sql = sql[:insert_pos].rstrip() + f" WHERE {first_season_clause} " + sql[insert_pos:]
+
+            print(f"🔧 FIXED SQL: {sql}")
 
         # Fix common SQL ordering issues
         # Check if WHERE is after GROUP BY (common GPT error)
@@ -306,6 +334,23 @@ class SQLChain:
         except Exception as e:
             print(f"SQL validation error: {e}")
             return False
+
+    def _validate_season_usage(self, sql: str, requested_season: str) -> str:
+        """Ensure the SQL uses the requested season parameter"""
+        import re
+
+        # Find all season references in the SQL
+        season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
+
+        # If there are seasons in the SQL but none match the requested season
+        if season_matches and requested_season not in season_matches:
+            print(f"🔧 SEASON VALIDATION: SQL uses {season_matches} but request asks for '{requested_season}'")
+
+            # Replace all season references with the requested season
+            sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{requested_season}'", sql, flags=re.IGNORECASE)
+            print(f"🔧 CORRECTED: Now using season = '{requested_season}'")
+
+        return sql
 
     def _add_season_filter(self, sql: str, season: str) -> str:
         """Add season filter to SQL if not present"""
