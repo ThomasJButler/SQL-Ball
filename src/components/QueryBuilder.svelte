@@ -39,14 +39,14 @@
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "Show me Liverpool's latest Premier League matches",
-    "Find Real Madrid vs Barcelona matches this season",
-    "Which Bundesliga teams score the most goals at home?",
-    "Show me Serie A matches with more than 4 goals",
-    "Compare PSG's home vs away record in Ligue 1",
-    "Find matches with the most red cards across all leagues",
-    "Show Arsenal's Champions League results this season",
-    "Which teams in La Liga have the strongest defense?"
+    "Show me Liverpool's latest matches this season",
+    "Find matches between Real Madrid and Barcelona",
+    "Which teams in the Premier League score the most goals at home?",
+    "Show me matches with more than 4 total goals",
+    "Find all Liverpool matches in 2024-2025 season",
+    "Show matches with the most yellow cards",
+    "Which teams have the best home record?",
+    "Find high-scoring matches in La Liga this season"
   ];
 
   onMount(async () => {
@@ -143,10 +143,9 @@
                 content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
 
 Database Schema:
-- seasons table: id, name (e.g., '2023-24', '2024-25')
-- matches table: id, season_id, match_date, home_team, away_team, home_score, away_score, home_xg, away_xg, home_shots, away_shots, result (H/A/D)
-- leagues table: id, league_name, country (e.g., 'Premier League', 'La Liga', 'Bundesliga')
-- teams table: id, team_name, league_id
+- matches table: id, match_date, home_team, away_team, home_score, away_score, result (H/A/D), div (league code like 'E0', 'SP1'), season ('2024-2025'), ht_home_score, ht_away_score, ht_result, referee, home_shots, away_shots, home_shots_target, away_shots_target, home_fouls, away_fouls, home_corners, away_corners, home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
+
+European league codes: E0=Premier League, SP1=La Liga, I1=Serie A, D1=Bundesliga, F1=Ligue 1, etc.
 
 Rules:
 1. Return ONLY the SQL query, no explanations or markdown
@@ -423,7 +422,9 @@ Output: SELECT match_date, home_team, away_team, home_score, away_score FROM mat
               on:change={toggleAutoExecute}
               class="sr-only peer"
             />
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+            <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:bg-green-600 transition-colors">
+              <div class="absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform {autoExecute ? 'translate-x-full' : 'translate-x-0'} dark:border-gray-600"></div>
+            </div>
           </label>
           <span class="text-sm text-slate-600 dark:text-slate-400">Auto-execute</span>
         </div>

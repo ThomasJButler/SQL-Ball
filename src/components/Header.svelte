@@ -43,8 +43,8 @@
       </button>
 
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-lg">SB</span>
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center">
+          <img src="/football.svg" alt="SQL Ball" class="w-8 h-8" />
         </div>
         <div>
           <h1 class="text-xl font-bold text-slate-900 dark:text-white">SQL-Ball</h1>

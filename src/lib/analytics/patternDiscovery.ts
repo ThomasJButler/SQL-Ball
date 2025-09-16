@@ -30,9 +30,10 @@ export class PatternDiscovery {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .eq('finished', true)
+      .not('home_score', 'is', null)
+      .not('away_score', 'is', null)
       .gt('away_score', 0)
-      .order('kickoff_time', { ascending: false })
+      .order('match_date', { ascending: false })
       .limit(Math.min(limit * 3, 100));
 
     if (error) throw error;
@@ -59,8 +60,9 @@ export class PatternDiscovery {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .eq('finished', true)
-      .order('kickoff_time', { ascending: false })
+      .not('home_score', 'is', null)
+      .not('away_score', 'is', null)
+      .order('match_date', { ascending: false })
       .limit(200);
 
     if (error) throw error;
