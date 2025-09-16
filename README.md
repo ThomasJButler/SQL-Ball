@@ -30,6 +30,12 @@ For detailed architectural decisions and design patterns used in this project, p
 - **Deployment:** Designed to be deployed to Vercel with separate configuration for the backend. Sensitive files like `backend/.env` should be added to `.gitignore` to protect credentials.
 - **Content Project:** This project was created as part of an intensive bootcamp to master generative AI applications in software development.
 
+## Acknowledgements
+
+Thank you for the incredible datasets, this would not be possible without - https://www.football-data.co.uk/data.php
+
+A special thanks to the CodeCademy Mastering Generative AI for Developers Bootcamp for inspiring this project and providing the learning environment that led to its creation. The course and this project in particular were a big learning curve for me and really enjoyed the experience.
+
 ## Getting Started
 
 1. **Installation:**
@@ -52,7 +58,3 @@ Contributions are welcome! Please check the issues and submit pull requests for 
 ## License
 
 This project is licensed under the terms described in the [LICENSE](LICENSE) file.
-
-## Acknowledgements
-
-Special thanks to the CodeCademy Mastering Generative AI for Developers Bootcamp for inspiring this project and providing the learning environment that led to its creation.
