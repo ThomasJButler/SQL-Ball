@@ -134,7 +134,7 @@ export class PatternDiscovery {
         id: match.id,
         type: 'comeback' as PatternType,
         title: `Comeback Kings: ${team} turned it around`,
-        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_goals ?? 0}-${match.away_goals ?? 0}`,
+        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_score ?? 0}-${match.away_score ?? 0}`,
         data: match,
         significance: 'high',
         query: `SELECT * FROM matches WHERE half_time_result != full_time_result`

@@ -185,7 +185,7 @@
                       {pattern.data.home_team}
                     </span>
                     <span class="text-lg font-bold text-green-500">
-                      {pattern.data.home_goals ?? 0} - {pattern.data.away_goals ?? 0}
+                      {pattern.data.home_score ?? 0} - {pattern.data.away_score ?? 0}
                     </span>
                     <span class="font-medium text-slate-700 dark:text-slate-300">
                       {pattern.data.away_team}

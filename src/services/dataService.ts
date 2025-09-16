@@ -259,15 +259,17 @@ class DataService {
 
       const form: TeamForm[] = teamMatches.map(match => {
         const isHome = match.home_team === teamName;
+        const homeScore = match.home_score ?? 0;
+        const awayScore = match.away_score ?? 0;
         const result = isHome
-          ? (match.home_score > match.away_score ? 'W' : match.home_score < match.away_score ? 'L' : 'D')
-          : (match.away_score > match.home_score ? 'W' : match.away_score < match.home_score ? 'L' : 'D');
+          ? (homeScore > awayScore ? 'W' : homeScore < awayScore ? 'L' : 'D')
+          : (awayScore > homeScore ? 'W' : awayScore < homeScore ? 'L' : 'D');
 
         return {
           match,
           result,
-          goalsScored: isHome ? match.home_score : match.away_score,
-          goalsConceded: isHome ? match.away_score : match.home_score
+          goalsScored: isHome ? homeScore : awayScore,
+          goalsConceded: isHome ? awayScore : homeScore
         };
       });
 

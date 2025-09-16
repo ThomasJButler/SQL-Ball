@@ -152,15 +152,15 @@
 
     // Filter matches with valid results
     const validMatches = matches.filter(m =>
-      m.home_goals !== null &&
-      m.away_goals !== null
+      m.home_score !== null &&
+      m.away_score !== null
     );
 
     // Total matches and goals
     totalMatches.set(validMatches.length);
 
     const goals = validMatches.reduce((sum, m) =>
-      sum + (m.home_goals || 0) + (m.away_goals || 0), 0
+      sum + (m.home_score || 0) + (m.away_score || 0), 0
     );
     totalGoals.set(goals);
 
@@ -176,7 +176,7 @@
     // Most common score
     const scoreMap = new Map<string, number>();
     validMatches.forEach(m => {
-      const score = `${m.home_goals}-${m.away_goals}`;
+      const score = `${m.home_score}-${m.away_score}`;
       scoreMap.set(score, (scoreMap.get(score) || 0) + 1);
     });
 
@@ -200,10 +200,10 @@
     const teamGoals = new Map<string, number>();
     validMatches.forEach(m => {
       teamGoals.set(m.home_team,
-        (teamGoals.get(m.home_team) || 0) + (m.home_goals || 0)
+        (teamGoals.get(m.home_team) || 0) + (m.home_score || 0)
       );
       teamGoals.set(m.away_team,
-        (teamGoals.get(m.away_team) || 0) + (m.away_goals || 0)
+        (teamGoals.get(m.away_team) || 0) + (m.away_score || 0)
       );
     });
 
@@ -221,7 +221,7 @@
       format(new Date(m.date), 'MMM d')
     );
     goalsChart.datasets[0].data = last10.map(m =>
-      (m.home_goals || 0) + (m.away_goals || 0)
+      (m.home_score || 0) + (m.away_score || 0)
     );
   }
 
@@ -455,7 +455,7 @@
                 </div>
               </div>
               <div class="text-lg font-bold text-slate-900 dark:text-white">
-                {match.home_goals ?? '-'} - {match.away_goals ?? '-'}
+                {match.home_score ?? '-'} - {match.away_score ?? '-'}
               </div>
             </div>
           {/each}
