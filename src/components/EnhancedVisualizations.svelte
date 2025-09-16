@@ -36,83 +36,28 @@
   );
 
   export let matches: Match[] = [];
-  export let selectedDateRange: string = '2024-2025';
+  export let selectedDateRange: string = 'all';
   export let selectedSeason: string = '2024-2025';
 
   let filteredMatches: Match[] = [];
   let chartTheme = 'dark';
 
-  // Date range options
+  // League options
   const dateRanges = [
-    { value: 'last7', label: 'Last 7 Days' },
-    { value: 'last30', label: 'Last 30 Days' },
-    { value: 'last90', label: 'Last 90 Days' },
-    { value: 'thisMonth', label: 'This Month' },
-    { value: 'lastMonth', label: 'Last Month' },
-    { value: '2024-2025', label: '2024-2025 Season (Completed)' }
+    { value: 'all', label: 'Full Season (All Data)', icon: '🏆' },
+    { value: 'E1', label: 'Premier League', icon: '🏴' },
+    { value: 'SP1', label: 'La Liga', icon: '🇪🇸' },
+    { value: 'G1', label: 'Bundesliga', icon: '🇩🇪' }
   ];
 
-  // Seasonal periods for 2024-2025 (completed season - we're in Sept 2025!)
-  const seasonalPeriods = [
-    { value: 'summer-2024', label: '☀️ Summer 2024', icon: '☀️' },
-    { value: 'autumn-2024', label: '🍂 Autumn 2024', icon: '🍂' },
-    { value: 'winter-2025', label: '❄️ Winter 2025', icon: '❄️' },
-    { value: 'spring-2025', label: '🌸 Spring 2025', icon: '🌸' }
-  ];
-
-  // Filter matches based on date range
+  // Filter matches based on league
   $: {
-    const now = new Date();
-    let startDate: Date;
-    let endDate = now;
-
-    switch (selectedDateRange) {
-      case 'last7':
-        startDate = subDays(now, 7);
-        break;
-      case 'last30':
-        startDate = subDays(now, 30);
-        break;
-      case 'last90':
-        startDate = subDays(now, 90);
-        break;
-      case 'thisMonth':
-        startDate = startOfMonth(now);
-        endDate = endOfMonth(now);
-        break;
-      case 'lastMonth':
-        startDate = startOfMonth(subDays(now, 30));
-        endDate = endOfMonth(subDays(now, 30));
-        break;
-      case '2024-2025':
-        startDate = new Date('2024-08-01');
-        endDate = new Date('2025-05-31');
-        break;
-      // Seasonal periods (adjusted for actual data availability)
-      case 'summer-2024':
-        startDate = new Date('2024-07-01');
-        endDate = new Date('2024-08-31');
-        break;
-      case 'autumn-2024':
-        startDate = new Date('2024-09-01');
-        endDate = new Date('2024-11-30');
-        break;
-      case 'winter-2025':
-        startDate = new Date('2024-12-01');
-        endDate = new Date('2025-02-28');
-        break;
-      case 'spring-2025':
-        startDate = new Date('2025-03-01');
-        endDate = new Date('2025-05-31');
-        break;
-      default:
-        startDate = subDays(now, 30);
+    if (selectedDateRange === 'all') {
+      // Show ALL data by default - no filtering!
+      filteredMatches = matches;
+    } else {
+      filteredMatches = matches.filter(m => m.div === selectedDateRange);
     }
-
-    filteredMatches = matches.filter(m => {
-      const matchDate = new Date(m.match_date);
-      return matchDate >= startDate && matchDate <= endDate;
-    });
   }
 
   // Goals Over Time Chart
@@ -350,22 +295,22 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Seasonal Periods Selector -->
+  <!-- Simplified Date Range Selector -->
   <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
     <Calendar class="w-5 h-5 text-green-500" />
-    <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">2024-25 Season:</span>
+    <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">View Data:</span>
     <div class="flex flex-wrap gap-2">
-      {#each seasonalPeriods as period}
+      {#each dateRanges as range}
         <button
-          on:click={() => selectedDateRange = period.value}
-          class="flex items-center gap-2 px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
-            selectedDateRange === period.value
+          on:click={() => selectedDateRange = range.value}
+          class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all {
+            selectedDateRange === range.value
               ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
               : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
           }"
         >
-          <span>{period.icon}</span>
-          <span>{period.label}</span>
+          <span>{range.icon}</span>
+          <span>{range.label}</span>
         </button>
       {/each}
     </div>

@@ -28,18 +28,19 @@
   let isExecuting = false;
   let useBackendAPI = true;
   let backendAvailable = false;
+  let autoExecute = false; // Added missing variable
   // Removed auto-execute functionality for deployment simplicity
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "Show me Liverpool's latest matches this season",
-    "Find matches between Real Madrid and Barcelona",
-    "Which teams in the Premier League score the most goals at home?",
-    "Show me matches with more than 4 total goals",
-    "Find all Liverpool matches in 2024-2025 season",
-    "Show matches with the most yellow cards",
-    "Which teams have the best home record?",
-    "Find high-scoring matches in La Liga this season"
+    "Show me Liverpool's recent matches",
+    "Find matches between Arsenal and Chelsea",
+    "Show me all Premier League matches",
+    "Find matches with more than 4 total goals",
+    "Show matches where home team won",
+    "Find all Manchester City home matches",
+    "Show recent high-scoring games",
+    "Find all draws in the Premier League"
   ];
 
   onMount(async () => {
@@ -109,6 +110,7 @@
         // If backend already executed the query
         if (response.results) {
           executionResult = response.results;
+        }
         // Auto-execute removed - user must click Execute button
       } else {
         // Fallback to direct OpenAI API call
@@ -132,25 +134,24 @@
                 content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
 
 Database Schema:
-- matches table: id, match_date, home_team, away_team, home_score, away_score, result (H/A/D), div (league code like 'E0', 'SP1'), season ('2024-2025'), ht_home_score, ht_away_score, ht_result, referee, home_shots, away_shots, home_shots_target, away_shots_target, home_fouls, away_fouls, home_corners, away_corners, home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
-
-European league codes: E0=Premier League, SP1=La Liga, I1=Serie A, D1=Bundesliga, F1=Ligue 1, etc.
+- matches table: id, match_date, home_team, away_team, home_score, away_score, result (H=home win, A=away win, D=draw), div (league code: E0=Premier League, SP1=La Liga, I1=Serie A, D1=Bundesliga, F1=Ligue 1)
 
 Rules:
 1. Return ONLY the SQL query, no explanations or markdown
-2. Use appropriate JOINs when needed
-3. Always limit results to prevent huge queries (default LIMIT 20)
-4. For current season, use season_id = '${selectedSeason}'
-5. Use proper PostgreSQL syntax
-6. For team names, use ILIKE for case-insensitive matching
-7. Format dates properly for PostgreSQL
+2. Always limit results to prevent huge queries (default LIMIT 20)
+3. Use proper PostgreSQL syntax
+4. For team names, use ILIKE for case-insensitive matching
+5. Order by match_date DESC for recent matches
 
 Examples:
 Input: "Show me Liverpool's recent matches"
-Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY match_date DESC LIMIT 10
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY match_date DESC LIMIT 20
 
-Input: "Find Real Madrid goals this season"
-Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Real Madrid%' OR away_team ILIKE '%Real Madrid%') AND season_id = '2024-25' ORDER BY match_date DESC LIMIT 20`
+Input: "Find matches with more than 4 goals"
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_score + away_score) > 4 ORDER BY match_date DESC LIMIT 20
+
+Input: "Show Premier League matches"
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE div = 'E0' ORDER BY match_date DESC LIMIT 20`
               },
               { role: 'user', content: naturalQuery }
             ],
@@ -324,35 +325,53 @@ Output: SELECT match_date, home_team, away_team, home_score, away_score FROM mat
     </p>
   </div>
 
-  <!-- Backend Status -->
-  {#if useBackendAPI && backendAvailable}
+  <!-- Setup Required Banner -->
+  {#if !hasApiKey}
+    <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl p-6 mb-6">
+      <div class="flex items-start justify-between">
+        <div class="flex items-start gap-4">
+          <AlertCircle class="w-8 h-8 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+          <div>
+            <h3 class="text-xl font-bold text-red-900 dark:text-red-100 mb-2">⚡ OpenAI API Key Required</h3>
+            <div class="space-y-2 text-sm text-red-800 dark:text-red-200">
+              <p><strong>To use SQL-Ball, you need an OpenAI API key for:</strong></p>
+              <ul class="list-disc list-inside ml-4 space-y-1">
+                <li>Converting natural language to SQL queries</li>
+                <li>Executing generated SQL statements</li>
+                <li>Getting AI-powered explanations</li>
+              </ul>
+              <p class="mt-3"><strong>💡 New to OpenAI?</strong> They offer $5 in free credits to get started!</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button
+            on:click={navigateToSettings}
+            class="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold rounded-lg transition-all flex items-center gap-2 shadow-lg"
+          >
+            <Key class="w-5 h-5" />
+            Quick Setup
+          </button>
+          <p class="text-xs text-red-600 dark:text-red-400 text-center">Includes tutorial wizard!</p>
+        </div>
+      </div>
+    </div>
+  {:else if useBackendAPI && backendAvailable}
     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6">
       <div class="flex items-center gap-3">
         <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         <p class="text-sm text-green-700 dark:text-green-400">
-          Connected to backend RAG service
+          ✅ Connected to backend RAG service with OpenAI API key
         </p>
       </div>
     </div>
-  {:else if !hasApiKey}
-    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <AlertCircle class="w-6 h-6 text-amber-600 dark:text-amber-400" />
-          <div>
-            <h3 class="font-semibold text-slate-900 dark:text-white">Backend API Not Available</h3>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Start the backend server or add your OpenAI API key in Settings as a fallback
-            </p>
-          </div>
-        </div>
-        <button
-          on:click={navigateToSettings}
-          class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-        >
-          <Key class="w-4 h-4" />
-          Add API Key
-        </button>
+  {:else if hasApiKey}
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+        <p class="text-sm text-blue-700 dark:text-blue-400">
+          ✅ OpenAI API key configured - Ready to generate and execute SQL!
+        </p>
       </div>
     </div>
   {/if}

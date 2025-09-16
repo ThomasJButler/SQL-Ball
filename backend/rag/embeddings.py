@@ -12,13 +12,17 @@ import os
 
 class SchemaEmbedder:
     def __init__(self):
-        self.chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        # Use environment variable for persistent directory, fallback to local
+        chroma_path = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
+        self.chroma_client = chromadb.PersistentClient(path=chroma_path)
         self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
         self.collection = None
-        self.supabase: Client = create_client(
-            os.getenv("VITE_SUPABASE_URL"),
-            os.getenv("VITE_SUPABASE_ANON_KEY")
-        )
+        supabase_url = os.getenv("VITE_SUPABASE_URL")
+        supabase_key = os.getenv("VITE_SUPABASE_ANON_KEY")
+        
+        self.supabase: Client | None = None
+        if supabase_url and supabase_key:
+            self.supabase = create_client(supabase_url, supabase_key)
 
     async def initialize(self):
         """Initialize ChromaDB collection with schema embeddings"""
@@ -40,82 +44,39 @@ class SchemaEmbedder:
     async def _embed_schema(self):
         """Embed the database schema into ChromaDB"""
 
-        # Define our schema with football context
+        # Define our schema with football context - simplified for real database
         schema_definitions = [
-            # Teams table
-            {
-                "id": "teams_table",
-                "document": "teams table contains Premier League teams with columns: name (team name like Arsenal, Chelsea), code (unique team identifier), season (2024-2025 or 2025-2026), strength ratings, elo rating",
-                "metadata": {
-                    "table": "teams",
-                    "type": "table",
-                    "columns": ["name", "code", "season", "elo", "strength"],
-                    "aliases": ["clubs", "football clubs", "team"]
-                }
-            },
-            # Players table
-            {
-                "id": "players_table",
-                "document": "players table contains all Premier League players with columns: player_id, web_name (display name), position (GK/DEF/MID/FWD), team_code, season",
-                "metadata": {
-                    "table": "players",
-                    "type": "table",
-                    "columns": ["player_id", "web_name", "position", "team_code", "season"],
-                    "aliases": ["footballers", "squad members"]
-                }
-            },
-            # Matches table
+            # Matches table - core table with basic match data
             {
                 "id": "matches_table",
-                "document": "matches table contains all match data with columns: gameweek, home_team, away_team, home_score, away_score, home_xg (expected goals), away_xg, possession, season, finished (boolean)",
+                "document": "matches table contains match results with columns: id, match_date, home_team, away_team, home_score, away_score, result (H/A/D), div (league division like E0 for Premier League)",
                 "metadata": {
                     "table": "matches",
                     "type": "table",
-                    "columns": ["gameweek", "home_team", "away_team", "home_score", "away_score", "home_xg", "away_xg", "season"],
-                    "aliases": ["games", "fixtures", "results"]
+                    "columns": ["id", "match_date", "home_team", "away_team", "home_score", "away_score", "result", "div"],
+                    "aliases": ["games", "fixtures", "results", "match_data"]
                 }
             },
-            # Player stats
+            # Teams basic info
             {
-                "id": "player_stats_table",
-                "document": "player_stats table contains FPL statistics: total_points, goals_scored, assists, clean_sheets, expected_goals (xG), expected_assists (xA), influence, creativity, threat, form, season",
+                "id": "teams_concept",
+                "document": "Teams are referenced by name in matches table. Common teams include Arsenal, Chelsea, Liverpool, Manchester City, Manchester United, Tottenham, etc.",
                 "metadata": {
-                    "table": "player_stats",
-                    "type": "table",
-                    "columns": ["player_id", "gameweek", "total_points", "goals_scored", "assists", "expected_goals", "form", "season"],
-                    "aliases": ["player statistics", "FPL stats", "player performance"]
+                    "concept": "teams",
+                    "type": "concept",
+                    "columns": ["home_team", "away_team"],
+                    "aliases": ["clubs", "football clubs", "team names"]
                 }
             },
-            # Player match stats
+            # League divisions
             {
-                "id": "player_match_stats_table",
-                "document": "player_match_stats table contains individual match performance: minutes_played, goals, assists, xg, xa, shots, tackles, interceptions, season",
+                "id": "divisions_concept", 
+                "document": "League divisions: E0=Premier League, E1=Championship, E2=League One, E3=League Two, SP1=La Liga, I1=Serie A, D1=Bundesliga, F1=Ligue 1",
                 "metadata": {
-                    "table": "player_match_stats",
-                    "type": "table",
-                    "columns": ["player_id", "gameweek", "minutes_played", "goals", "assists", "xg", "xa", "season"],
-                    "aliases": ["match performance", "individual stats"]
-                }
-            },
-            # Views
-            {
-                "id": "top_scorers_view",
-                "document": "top_scorers view shows leading goalscorers with total_goals, total_assists, total_xg aggregated across all matches",
-                "metadata": {
-                    "table": "top_scorers",
-                    "type": "view",
-                    "columns": ["web_name", "position", "total_goals", "total_assists", "total_xg"],
-                    "aliases": ["golden boot", "top goalscorers", "leading scorers"]
-                }
-            },
-            {
-                "id": "team_performance_view",
-                "document": "team_performance view shows team statistics: wins, draws, losses, goals_for, goals_against, avg_xg, avg_possession",
-                "metadata": {
-                    "table": "team_performance",
-                    "type": "view",
-                    "columns": ["team", "wins", "draws", "losses", "goals_for", "goals_against", "avg_xg"],
-                    "aliases": ["league table", "team stats", "standings"]
+                    "concept": "divisions",
+                    "type": "concept", 
+                    "column": "div",
+                    "aliases": ["leagues", "competitions", "divisions"]
                 }
             }
         ]
