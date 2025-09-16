@@ -11,17 +11,16 @@ export interface Season {
 
 export interface Match {
   id: string;
-  season_id: string;
-  date: string;
+  match_date: string;
+  div: string; // League code (e.g., 'E0', 'SP1', 'I1')
   home_team: string;
   away_team: string;
   home_score: number | null;
   away_score: number | null;
   result: 'H' | 'A' | 'D' | null;
-  first_half_home_goals: number | null;
-  first_half_away_goals: number | null;
-  full_time_result: 'H' | 'A' | 'D' | null;
-  half_time_result: 'H' | 'A' | 'D' | null;
+  ht_home_score: number | null;
+  ht_away_score: number | null;
+  ht_result: 'H' | 'A' | 'D' | null;
   referee: string | null;
   home_shots: number | null;
   away_shots: number | null;
@@ -31,10 +30,11 @@ export interface Match {
   away_fouls: number | null;
   home_corners: number | null;
   away_corners: number | null;
-  home_yellows: number | null;
-  away_yellows: number | null;
-  home_reds: number | null;
-  away_reds: number | null;
+  home_yellow_cards: number | null;
+  away_yellow_cards: number | null;
+  home_red_cards: number | null;
+  away_red_cards: number | null;
+  season: string; // e.g., '2024-2025'
   created_at: string;
 }
 

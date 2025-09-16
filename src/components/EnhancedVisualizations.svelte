@@ -36,7 +36,7 @@
   );
 
   export let matches: Match[] = [];
-  export let selectedDateRange: string = 'last30';
+  export let selectedDateRange: string = '2024-2025';
   export let selectedSeason: string = '2024-2025';
 
   let filteredMatches: Match[] = [];
@@ -49,8 +49,15 @@
     { value: 'last90', label: 'Last 90 Days' },
     { value: 'thisMonth', label: 'This Month' },
     { value: 'lastMonth', label: 'Last Month' },
-    { value: '2024-2025', label: '2024-2025 Season' },
-    { value: '2025-2026', label: '2025-2026 Season' }
+    { value: '2024-2025', label: '2024-2025 Season (Completed)' }
+  ];
+
+  // Seasonal periods for 2024-2025 (completed season - we're in Sept 2025!)
+  const seasonalPeriods = [
+    { value: 'summer-2024', label: '☀️ Summer 2024', icon: '☀️' },
+    { value: 'autumn-2024', label: '🍂 Autumn 2024', icon: '🍂' },
+    { value: 'winter-2025', label: '❄️ Winter 2025', icon: '❄️' },
+    { value: 'spring-2025', label: '🌸 Spring 2025', icon: '🌸' }
   ];
 
   // Filter matches based on date range
@@ -81,25 +88,38 @@
         startDate = new Date('2024-08-01');
         endDate = new Date('2025-05-31');
         break;
-      case '2025-2026':
-        startDate = new Date('2025-08-01');
-        endDate = new Date('2026-05-31');
+      // Seasonal periods (adjusted for actual data availability)
+      case 'summer-2024':
+        startDate = new Date('2024-07-01');
+        endDate = new Date('2024-08-31');
+        break;
+      case 'autumn-2024':
+        startDate = new Date('2024-09-01');
+        endDate = new Date('2024-11-30');
+        break;
+      case 'winter-2025':
+        startDate = new Date('2024-12-01');
+        endDate = new Date('2025-02-28');
+        break;
+      case 'spring-2025':
+        startDate = new Date('2025-03-01');
+        endDate = new Date('2025-05-31');
         break;
       default:
         startDate = subDays(now, 30);
     }
 
     filteredMatches = matches.filter(m => {
-      const matchDate = new Date(m.date);
+      const matchDate = new Date(m.match_date);
       return matchDate >= startDate && matchDate <= endDate;
     });
   }
 
   // Goals Over Time Chart
   $: goalsOverTimeData = (() => {
-    const labels = filteredMatches.slice(-10).map(m => format(new Date(m.date), 'MMM dd'));
-    const homeGoals = filteredMatches.slice(-10).map(m => m.home_goals || 0);
-    const awayGoals = filteredMatches.slice(-10).map(m => m.away_goals || 0);
+    const labels = filteredMatches.slice(-10).map(m => format(new Date(m.match_date), 'MMM dd'));
+    const homeGoals = filteredMatches.slice(-10).map(m => m.home_score || 0);
+    const awayGoals = filteredMatches.slice(-10).map(m => m.away_score || 0);
 
     return {
       labels,
@@ -136,8 +156,8 @@
         (m.away_team?.includes(team) && m.result === 'A')
       ).length;
       const goals = teamMatches.reduce((sum, m) => {
-        if (m.home_team?.includes(team)) return sum + (m.home_goals || 0);
-        if (m.away_team?.includes(team)) return sum + (m.away_goals || 0);
+        if (m.home_team?.includes(team)) return sum + (m.home_score || 0);
+        if (m.away_team?.includes(team)) return sum + (m.away_score || 0);
         return sum;
       }, 0);
       const shots = teamMatches.reduce((sum, m) => {
@@ -198,7 +218,7 @@
   $: goalDistributionData = (() => {
     const distribution: Record<string, number> = {};
     filteredMatches.forEach(m => {
-      const totalGoals = (m.home_goals || 0) + (m.away_goals || 0);
+      const totalGoals = (m.home_score || 0) + (m.away_score || 0);
       const key = totalGoals >= 6 ? '6+' : totalGoals.toString();
       distribution[key] = (distribution[key] || 0) + 1;
     });
@@ -330,20 +350,22 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Date Range Selector -->
+  <!-- Seasonal Periods Selector -->
   <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
     <Calendar class="w-5 h-5 text-green-500" />
+    <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">2024-25 Season:</span>
     <div class="flex flex-wrap gap-2">
-      {#each dateRanges as range}
+      {#each seasonalPeriods as period}
         <button
-          on:click={() => selectedDateRange = range.value}
-          class="px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
-            selectedDateRange === range.value
-              ? 'bg-green-500 text-black shadow-lg shadow-green-500/30'
+          on:click={() => selectedDateRange = period.value}
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
+            selectedDateRange === period.value
+              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
               : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
           }"
         >
-          {range.label}
+          <span>{period.icon}</span>
+          <span>{period.label}</span>
         </button>
       {/each}
     </div>
@@ -405,7 +427,7 @@
     <div class="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl p-4 border border-blue-500/20">
       <p class="text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Goals/Match</p>
       <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-        {(filteredMatches.reduce((sum, m) => sum + (m.home_goals || 0) + (m.away_goals || 0), 0) / Math.max(filteredMatches.length, 1)).toFixed(1)}
+        {(filteredMatches.reduce((sum, m) => sum + (m.home_score || 0) + (m.away_score || 0), 0) / Math.max(filteredMatches.length, 1)).toFixed(1)}
       </p>
     </div>
     <div class="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl p-4 border border-purple-500/20">
@@ -417,7 +439,7 @@
     <div class="bg-gradient-to-br from-amber-500/10 to-amber-600/10 rounded-xl p-4 border border-amber-500/20">
       <p class="text-sm text-slate-600 dark:text-slate-400 mb-1">High Scoring</p>
       <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">
-        {filteredMatches.filter(m => (m.home_goals || 0) + (m.away_goals || 0) >= 4).length}
+        {filteredMatches.filter(m => (m.home_score || 0) + (m.away_score || 0) >= 4).length}
       </p>
     </div>
   </div>

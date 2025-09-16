@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LayoutDashboard, BarChart3, Bot, Settings, LogOut, Search, FileText, HelpCircle, Trophy, User, Sparkles } from 'lucide-svelte';
+  import { LayoutDashboard, BarChart3, Bot, Settings, LogOut, Search, FileText, HelpCircle, Sparkles } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let currentView: string;
@@ -14,11 +14,8 @@
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, view: 'Dashboard' },
     { name: 'Query Builder', icon: Search, view: 'Query Builder' },
-    { name: 'Submit Query', icon: FileText, view: 'Submit Query' },
-    { name: 'Pattern Discovery', icon: Sparkles, view: 'Pattern Discovery' },
-    { name: 'Season Stats', icon: BarChart3, view: 'Season Stats' },
-    { name: 'Top Scorers', icon: Trophy, view: 'Top Scorers' },
-    { name: 'Player Profile', icon: User, view: 'Player Profile' },
+    // { name: 'Pattern Discovery', icon: Sparkles, view: 'Pattern Discovery' },
+    // { name: 'Season Stats', icon: BarChart3, view: 'Season Stats' },
     { name: 'AI Assistant', icon: Bot, view: 'AI Assistant' },
   ];
 
@@ -43,8 +40,8 @@
     <div class="px-4 py-6 border-b border-slate-200 dark:border-slate-700">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-            <span class="text-white font-bold text-lg">SB</span>
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center">
+            <img src="/football.svg" alt="SQL Ball" class="w-8 h-8" />
           </div>
           <div>
             <h2 class="text-sm font-semibold text-slate-900 dark:text-white">SQL-Ball</h2>

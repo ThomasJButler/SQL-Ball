@@ -21,7 +21,7 @@
       
       // Add upcoming matches
       upcomingMatches.slice(0, 3).forEach(match => {
-        const dateStr = format(new Date(match.date), 'EEEE h:mmaaa');
+        const dateStr = format(new Date(match.match_date), 'EEEE h:mmaaa');
         tickerItems.push({
           text: `⚽ Upcoming: ${match.home_team} vs ${match.away_team} - ${dateStr}`,
           type: 'match'

@@ -19,6 +19,7 @@ from rag.chain import SQLChain
 from rag.football import FootballTermMapper
 from api.query import query_router, set_dependencies as set_query_deps
 from api.optimize import optimize_router, set_sql_chain
+from api.execute import execute_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -30,7 +31,7 @@ app = FastAPI(
 # Configure CORS for Svelte frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:4173"],  # Vite dev and preview
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"],  # Vite dev and preview
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +68,7 @@ async def startup_event():
 # Include routers
 app.include_router(query_router, prefix="/api")
 app.include_router(optimize_router, prefix="/api")
+app.include_router(execute_router, prefix="/api")
 
 # Health check endpoint
 @app.get("/health")
@@ -84,6 +86,7 @@ async def root():
         "message": "SQL-Ball API - Football Analytics RAG System",
         "endpoints": {
             "/api/query": "Convert natural language to SQL",
+            "/api/execute": "Execute SQL queries",
             "/api/optimize": "Optimize SQL queries",
             "/api/schema": "Get database schema",
             "/api/patterns": "Discover patterns in data",
@@ -92,39 +95,6 @@ async def root():
         }
     }
 
-# Basic query model for testing
-class QueryRequest(BaseModel):
-    question: str
-    season: Optional[str] = "2024-2025"
-    include_explanation: bool = True
-
-class QueryResponse(BaseModel):
-    sql: str
-    explanation: Optional[str] = None
-    results: Optional[List[Dict[Any, Any]]] = None
-    execution_time_ms: Optional[float] = None
-    optimizations: Optional[List[str]] = None
-
-# Test endpoint for natural language to SQL
-@app.post("/api/query", response_model=QueryResponse)
-async def process_query(request: QueryRequest):
-    """
-    Convert natural language question to SQL and execute it
-    """
-    if not sql_chain:
-        raise HTTPException(status_code=503, detail="RAG system not initialized")
-
-    try:
-        # Process the query through our RAG pipeline
-        result = await sql_chain.process_query(
-            request.question,
-            season=request.season,
-            include_explanation=request.include_explanation
-        )
-
-        return QueryResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

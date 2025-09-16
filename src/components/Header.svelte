@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sun, Moon, Github, Menu } from 'lucide-svelte';
+  import { Sun, Moon, Github, Menu, Linkedin } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let toggleSidebar: () => void;
@@ -43,8 +43,8 @@
       </button>
 
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-lg">SB</span>
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center">
+          <img src="/football.svg" alt="SQL Ball" class="w-6 h-6" />
         </div>
         <div>
           <h1 class="text-xl font-bold text-slate-900 dark:text-white">SQL-Ball</h1>
@@ -64,6 +64,17 @@
         aria-label="GitHub Repository"
       >
         <Github class="w-5 h-5 text-slate-600 dark:text-slate-400" />
+      </a>
+
+      <!-- LinkedIn Link -->
+      <a
+        href="https://www.linkedin.com/in/thomasjbutler/"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        aria-label="LinkedIn Profile"
+      >
+        <Linkedin class="w-5 h-5 text-slate-600 dark:text-slate-400" />
       </a>
 
       <!-- Theme Toggle -->

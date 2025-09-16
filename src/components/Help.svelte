@@ -7,10 +7,10 @@
   
   const sections = [
     { id: 'getting-started', title: 'Getting Started', icon: Home },
-    { id: 'predictions', title: 'Understanding Predictions', icon: TrendingUp },
-    { id: 'maximizing', title: 'Maximizing Accuracy', icon: Zap },
+    { id: 'query-builder', title: 'Query Builder', icon: TrendingUp },
+    { id: 'pattern-discovery', title: 'Pattern Discovery', icon: Zap },
     { id: 'features', title: 'Features Guide', icon: Book },
-    { id: 'security', title: 'Privacy & Security', icon: Shield },
+    { id: 'data', title: 'European League Data', icon: Shield },
     { id: 'faq', title: 'FAQ', icon: HelpCircle }
   ];
 </script>
@@ -68,28 +68,28 @@
             <div class="prose prose-slate dark:prose-invert max-w-none">
               <h2 class="text-3xl font-bold mb-6 gradient-text">Getting Started</h2>
               
-              <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl mb-8">
-                <h3 class="text-xl font-semibold mb-4">Quick Setup Guide</h3>
+              <div class="bg-green-50 dark:bg-green-900/20 p-6 rounded-xl mb-8">
+                <h3 class="text-xl font-semibold mb-4">Welcome to SQL Ball!</h3>
                 <ol class="space-y-4">
                   <li class="flex gap-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">1</span>
+                    <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">1</span>
                     <div>
-                      <strong>Get Your API Key</strong>
-                      <p class="text-sm mt-1">Sign up at Football-Data.org for a free API key with 10 requests per minute.</p>
+                      <strong>Explore the Dashboard</strong>
+                      <p class="text-sm mt-1">View comprehensive analytics from 22 European leagues and 7,681+ matches from the completed 2024-2025 season.</p>
                     </div>
                   </li>
                   <li class="flex gap-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">2</span>
+                    <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">2</span>
                     <div>
-                      <strong>Enter API Key</strong>
-                      <p class="text-sm mt-1">Use the setup wizard or go to Settings to add your key.</p>
+                      <strong>Use Natural Language Queries</strong>
+                      <p class="text-sm mt-1">Ask questions in plain English using the Query Builder - powered by AI to generate SQL automatically.</p>
                     </div>
                   </li>
                   <li class="flex gap-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">3</span>
+                    <span class="flex-shrink-0 w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">3</span>
                     <div>
-                      <strong>Start Predicting</strong>
-                      <p class="text-sm mt-1">Access live data, predictions, and analytics instantly.</p>
+                      <strong>Discover Patterns</strong>
+                      <p class="text-sm mt-1">Uncover unusual statistics and hidden patterns in European football data with our Pattern Discovery engine.</p>
                     </div>
                   </li>
                 </ol>
@@ -122,9 +122,9 @@
               </div>
             </div>
 
-          {:else if selectedSection === 'predictions'}
+          {:else if selectedSection === 'query-builder'}
             <div class="prose prose-slate dark:prose-invert max-w-none">
-              <h2 class="text-3xl font-bold mb-6 gradient-text">Understanding Predictions</h2>
+              <h2 class="text-3xl font-bold mb-6 gradient-text">Query Builder Guide</h2>
               
               <div class="mb-8">
                 <h3 class="text-xl font-semibold mb-4">Our Three-Model System</h3>

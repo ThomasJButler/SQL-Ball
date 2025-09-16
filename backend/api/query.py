@@ -63,8 +63,43 @@ async def process_natural_language_query(request: QueryRequest):
 
         return QueryResponse(**result)
 
+    except ValueError as e:
+        # Handle missing API key and validation errors
+        if "api key" in str(e).lower():
+            raise HTTPException(
+                status_code=401,
+                detail=f"OpenAI API Key required: {str(e)}"
+            )
+        else:
+            raise HTTPException(status_code=400, detail=str(e))
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+        # Log the full error for debugging
+        print(f"🚨 ERROR: Query processing failed: {str(e)}")
+        print(f"🚨 Question: {request.question}")
+
+        # Return more specific error messages
+        error_msg = str(e).lower()
+        if "api" in error_msg and "key" in error_msg:
+            raise HTTPException(
+                status_code=401,
+                detail="OpenAI API key is required for SQL generation"
+            )
+        elif "openai" in error_msg:
+            raise HTTPException(
+                status_code=502,
+                detail="OpenAI API error - check your API key and quota"
+            )
+        elif "timeout" in error_msg:
+            raise HTTPException(
+                status_code=504,
+                detail="Query processing timed out - try a simpler question"
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Query processing failed: {str(e)}"
+            )
 
 @router.get("/schema", response_model=SchemaResponse)
 async def get_database_schema():

@@ -161,7 +161,7 @@ ${awayWinBar}
         context += 'Recent Results (Last 7 days):\n';
         recentMatches.slice(0, 10).forEach(match => {
           if (match.home_score !== null && match.away_score !== null) {
-            const date = new Date(match.date).toLocaleDateString('en-GB', {
+            const date = new Date(match.match_date).toLocaleDateString('en-GB', {
               day: 'numeric',
               month: 'short'
             });
@@ -175,7 +175,7 @@ ${awayWinBar}
       if (upcomingMatches && upcomingMatches.length > 0) {
         context += 'Upcoming Fixtures (Next 7 days):\n';
         upcomingMatches.slice(0, 10).forEach(match => {
-          const matchDate = new Date(match.date);
+          const matchDate = new Date(match.match_date);
           const dateStr = matchDate.toLocaleDateString('en-GB', {
             weekday: 'short',
             day: 'numeric',

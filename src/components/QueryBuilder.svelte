@@ -1,53 +1,76 @@
 <script lang="ts">
-  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check } from 'lucide-svelte';
+  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check, Key, AlertCircle } from 'lucide-svelte';
   import { onMount } from 'svelte';
-  import { ragService, type QueryResponse } from '../services/ragService';
+  import { createEventDispatcher } from 'svelte';
   import { supabase } from '../lib/supabase';
+  import { apiService } from '../services/apiService';
+
+  const dispatch = createEventDispatcher();
+
+  interface QueryResponse {
+    sql: string;
+    explanation?: string;
+    confidence?: number;
+    optimizationSuggestions?: string[];
+    performanceEstimate?: string;
+  }
 
   let naturalQuery = '';
   let isLoading = false;
   let queryResult: QueryResponse | null = null;
   let executionResult: any[] = [];
   let error: string | null = null;
-  let backendHealthy = false;
+  let hasApiKey = false;
   let showExamples = false;
   let selectedSeason = '2024-2025';
   let showOptimizations = false;
   let copySuccess = false;
   let isExecuting = false;
+  let useBackendAPI = true;
+  let backendAvailable = false;
+  // Removed auto-execute functionality for deployment simplicity
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
-    "Show me the top 5 scorers",
+    "Show me Liverpool's latest matches this season",
+    "Find matches between Real Madrid and Barcelona",
+    "Which teams in the Premier League score the most goals at home?",
+    "Show me matches with more than 4 total goals",
+    "Find all Liverpool matches in 2024-2025 season",
+    "Show matches with the most yellow cards",
     "Which teams have the best home record?",
-    "Find all strikers with more than 10 goals",
-    "Show me Arsenal's recent matches",
-    "Who has the most assists this season?",
-    "List the clean sheets by goalkeepers",
-    "Show matches with highest expected goals",
-    "Find players from Manchester clubs"
+    "Find high-scoring matches in La Liga this season"
   ];
 
   onMount(async () => {
-    // Check backend health
-    try {
-      backendHealthy = await ragService.checkHealth();
-      if (backendHealthy) {
-        console.log('✅ SQL-Ball RAG backend connected');
-        // Load example queries
-        const examples = await ragService.getExamples();
-        console.log('Loaded examples:', examples);
-      } else {
-        error = 'Backend not ready. Please ensure the FastAPI server is running on port 8000.';
-      }
-    } catch (err) {
-      console.error('Failed to connect to backend:', err);
-      error = 'Cannot connect to backend. Run: cd backend && uvicorn main:app --reload';
+    // Check if backend API is available
+    backendAvailable = await apiService.isAvailable();
+
+    if (!backendAvailable) {
+      // Fallback to checking for OpenAI API key for direct use
+      const apiKey = localStorage.getItem('openai_api_key');
+      hasApiKey = !!apiKey;
+      useBackendAPI = false;
+    } else {
+      // Backend is available, no need for direct API key
+      hasApiKey = true;
+      useBackendAPI = true;
     }
+
+    // Auto-execute functionality removed
   });
 
+  function navigateToSettings() {
+    dispatch('navigate', { view: 'Settings' });
+  }
+
   async function handleSubmit() {
-    if (!naturalQuery.trim() || !backendHealthy) return;
+    if (!naturalQuery.trim()) return;
+
+    if (!useBackendAPI && !hasApiKey) {
+      error = 'Please add your OpenAI API key in Settings or ensure the backend API is running.';
+      return;
+    }
 
     isLoading = true;
     error = null;
@@ -56,42 +79,113 @@
     showOptimizations = false;
 
     try {
-      // Get OpenAI API key from localStorage
-      const apiKey = localStorage.getItem('openai_api_key');
+      if (useBackendAPI) {
+        // Get API key from localStorage for backend request
+        const apiKey = localStorage.getItem('openai_api_key');
+        
+        if (!apiKey) {
+          error = 'Please add your OpenAI API key in Settings to use the backend RAG service.';
+          return;
+        }
 
-      if (!apiKey) {
-        error = 'OpenAI API key not found. Please set it up in Settings or refresh the page.';
-        return;
-      }
+        // Use backend API service with API key
+        const response = await apiService.convertToSQL({
+          question: naturalQuery,
+          season: selectedSeason,
+          include_explanation: true,
+          api_key: apiKey
+        });
 
-      // Process query through RAG backend
-      const response = await ragService.processQuery({
-        question: naturalQuery,
-        season: selectedSeason,
-        include_explanation: true,
-        limit: 20,
-        api_key: apiKey  // Send API key with request
-      });
+        queryResult = {
+          sql: response.sql,
+          explanation: response.explanation || 'Query generated successfully',
+          confidence: 0.95,
+          optimizationSuggestions: response.optimizations || [],
+          performanceEstimate: response.execution_time_ms 
+            ? `${response.execution_time_ms}ms` 
+            : 'Fast'
+        };
 
-      // Store the response
-      queryResult = {
-        sql: response.sql,
-        explanation: response.explanation || 'Query processed successfully',
-        confidence: 0.95, // Default confidence
-        optimizationSuggestions: response.optimizations || [],
-        performanceEstimate: response.execution_time_ms ? `${response.execution_time_ms}ms` : 'Fast'
-      };
+        // If backend already executed the query
+        if (response.results) {
+          executionResult = response.results;
+        // Auto-execute removed - user must click Execute button
+      } else {
+        // Fallback to direct OpenAI API call
+        const apiKey = localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+          throw new Error('OpenAI API key not found');
+        }
 
-      // Backend returns mock results for now
-      // We'll execute the SQL ourselves
-      if (response.results && Array.isArray(response.results) && response.results[0]?.message) {
-        // This is just the backend's mock response
-        // Execute the query ourselves
-        await executeSQL();
+        // Make direct call to OpenAI API
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4-turbo-preview',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
+
+Database Schema:
+- matches table: id, match_date, home_team, away_team, home_score, away_score, result (H/A/D), div (league code like 'E0', 'SP1'), season ('2024-2025'), ht_home_score, ht_away_score, ht_result, referee, home_shots, away_shots, home_shots_target, away_shots_target, home_fouls, away_fouls, home_corners, away_corners, home_yellow_cards, away_yellow_cards, home_red_cards, away_red_cards
+
+European league codes: E0=Premier League, SP1=La Liga, I1=Serie A, D1=Bundesliga, F1=Ligue 1, etc.
+
+Rules:
+1. Return ONLY the SQL query, no explanations or markdown
+2. Use appropriate JOINs when needed
+3. Always limit results to prevent huge queries (default LIMIT 20)
+4. For current season, use season_id = '${selectedSeason}'
+5. Use proper PostgreSQL syntax
+6. For team names, use ILIKE for case-insensitive matching
+7. Format dates properly for PostgreSQL
+
+Examples:
+Input: "Show me Liverpool's recent matches"
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY match_date DESC LIMIT 10
+
+Input: "Find Real Madrid goals this season"
+Output: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Real Madrid%' OR away_team ILIKE '%Real Madrid%') AND season_id = '2024-25' ORDER BY match_date DESC LIMIT 20`
+              },
+              { role: 'user', content: naturalQuery }
+            ],
+            temperature: 0.2,
+            max_tokens: 500
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to generate SQL');
+        }
+
+        const data = await response.json();
+        const generatedSQL = data.choices[0].message.content;
+
+        // Store the response
+        queryResult = {
+          sql: generatedSQL.trim(),
+          explanation: 'Query generated successfully',
+          confidence: 0.95,
+          optimizationSuggestions: [],
+          performanceEstimate: 'Fast'
+        };
+
+        // Auto-execute removed - user must click Execute button
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
       console.error('Query error:', err);
+      
+      // If backend fails, try to fallback
+      if (useBackendAPI && err.message.includes('fetch')) {
+        error = 'Backend API is not available. Please ensure the backend server is running or add your OpenAI API key in Settings.';
+      }
     } finally {
       isLoading = false;
     }
@@ -143,29 +237,13 @@
     executionResult = [];
 
     try {
-      // Clean the SQL - remove trailing semicolon for Supabase
-      const sql = queryResult.sql.replace(/;\s*$/, '');
-
-      // Use Supabase RPC to execute the SQL
-      const { data, error: execError } = await supabase
-        .rpc('execute_sql', { query_text: sql });
-
-      if (execError) {
-        error = `Query execution failed: ${execError.message}`;
-        console.error('Execution error:', execError);
-        return;
-      }
-
-      // Check if the result contains an error
-      if (data && data.error) {
-        error = `SQL Error: ${data.message}`;
-        return;
-      }
-
-      // Parse the results
-      executionResult = data || [];
-
-      if (executionResult.length === 0) {
+      // Use backend API service to execute SQL
+      const results = await apiService.executeSQL(queryResult.sql);
+      
+      // Handle the response
+      if (results && results.length > 0) {
+        executionResult = results;
+      } else {
         error = 'Query executed successfully but returned no results';
       }
     } catch (err) {
@@ -246,6 +324,39 @@
     </p>
   </div>
 
+  <!-- Backend Status -->
+  {#if useBackendAPI && backendAvailable}
+    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <p class="text-sm text-green-700 dark:text-green-400">
+          Connected to backend RAG service
+        </p>
+      </div>
+    </div>
+  {:else if !hasApiKey}
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <AlertCircle class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <div>
+            <h3 class="font-semibold text-slate-900 dark:text-white">Backend API Not Available</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Start the backend server or add your OpenAI API key in Settings as a fallback
+            </p>
+          </div>
+        </div>
+        <button
+          on:click={navigateToSettings}
+          class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Key class="w-4 h-4" />
+          Add API Key
+        </button>
+      </div>
+    </div>
+  {/if}
+
   <!-- Query Input -->
   <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6 border border-slate-200 dark:border-slate-800">
     <div class="flex items-center gap-3 mb-4">
@@ -287,7 +398,9 @@
             Generate SQL
           {/if}
         </button>
-        
+
+        <!-- Auto-execute toggle removed for deployment simplicity -->
+
         <button
           type="button"
           on:click={() => showExamples = !showExamples}
@@ -339,7 +452,7 @@
             <div class="flex items-center gap-2">
               <span class="text-sm text-slate-500">Confidence:</span>
               <span class="text-sm font-medium text-green-600 dark:text-green-400">
-                {Math.round(queryResult.confidence * 100)}%
+                {Math.round((queryResult.confidence || 0) * 100)}%
               </span>
             </div>
             <button
@@ -362,7 +475,8 @@
 {formatSQL(queryResult.sql)}
         </pre>
 
-        <!-- Execute Button -->
+        <!-- Execute Button - Show when auto-execute is disabled -->
+        {#if !autoExecute || executionResult.length === 0}
         <div class="flex justify-end">
           <button
             on:click={executeSQL}
@@ -378,6 +492,7 @@
             {/if}
           </button>
         </div>
+        {/if}
 
         <!-- Explanation -->
         <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

@@ -7,7 +7,7 @@ from langchain.chains import create_sql_query_chain
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.schema import BaseMessage
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 import os
 import time
 from supabase import create_client, Client
@@ -18,25 +18,69 @@ class SQLChain:
         self.schema_embedder = schema_embedder
         self.football_mapper = football_mapper
         self.default_api_key = os.getenv("VITE_OPENAI_API_KEY")  # Fallback API key
+        self.llm: Optional[ChatOpenAI] = None  # Will be initialized when API key is available
 
         # Initialize Supabase
-        self.supabase: Client = create_client(
-            os.getenv("VITE_SUPABASE_URL"),
-            os.getenv("VITE_SUPABASE_ANON_KEY")
-        )
+        supabase_url = os.getenv("VITE_SUPABASE_URL")
+        supabase_key = os.getenv("VITE_SUPABASE_ANON_KEY")
+        
+        if supabase_url and supabase_key:
+            self.supabase: Optional[Client] = create_client(supabase_url, supabase_key)
+        else:
+            self.supabase: Optional[Client] = None
+            print("Warning: Supabase configuration missing")
 
         # Create prompt template
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert SQL query generator for a football (soccer) analytics database.
+            ("system", """You are an expert PostgreSQL query generator for a Supabase football (soccer) analytics database.
 
-            Database Schema:
-            - teams: id, code, name, short_name, season, elo, strength
-            - players: id, player_id, web_name, position (GK/DEF/MID/FWD), team_code, season
-            - matches: id, gameweek, home_team, away_team, home_score, away_score, home_xg, away_xg, season, finished
-            - player_stats: id, player_id, gameweek, total_points, goals_scored, assists, expected_goals, form, season
-            - player_match_stats: id, player_id, gameweek, minutes_played, goals, assists, xg, xa, season
+            EXACT DATABASE SCHEMA (PostgreSQL/Supabase):
 
-            Available seasons: '2024-2025', '2025-2026'
+            European Football Leagues Database - 22 leagues across 11 countries
+
+            Tables and ALL columns:
+
+            leagues:
+            - id (integer, PRIMARY KEY), code (varchar(10), UNIQUE), name (varchar(100)), country (varchar(50))
+            - tier (integer), season (varchar(20) DEFAULT '2024-2025'), created_at (timestamp with time zone)
+
+            Available leagues:
+            - England: E0 (Premier League), E1 (Championship), E2 (League One), E3 (League Two), EC (National League)
+            - Spain: SP1 (La Liga), SP2 (Segunda División)
+            - Germany: D1 (Bundesliga), D2 (2. Bundesliga)
+            - Italy: I1 (Serie A), I2 (Serie B)
+            - France: F1 (Ligue 1), F2 (Ligue 2)
+            - Netherlands: N1 (Eredivisie)
+            - Belgium: B1 (Pro League)
+            - Portugal: P1 (Primeira Liga)
+            - Turkey: T1 (Süper Lig)
+            - Greece: G1 (Super League)
+            - Scotland: SC0 (Premiership), SC1 (Championship), SC2 (League One), SC3 (League Two)
+
+            teams:
+            - id (integer, PRIMARY KEY), name (varchar(100)), league_code (varchar(10) REFERENCES leagues(code))
+            - season (varchar(20) DEFAULT '2024-2025'), created_at (timestamp with time zone)
+            - UNIQUE constraint on (name, league_code, season)
+
+            matches:
+            - id (integer, PRIMARY KEY), div (varchar(10) REFERENCES leagues(code)), match_date (date), match_time (time)
+            - home_team (varchar(100)), away_team (varchar(100)), home_score (integer), away_score (integer)
+            - result (char(1): H/A/D), ht_home_score (integer), ht_away_score (integer), ht_result (char(1): H/A/D)
+            - referee (varchar(100)), home_shots (integer), away_shots (integer)
+            - home_shots_target (integer), away_shots_target (integer), home_fouls (integer), away_fouls (integer)
+            - home_corners (integer), away_corners (integer), home_yellow_cards (integer), away_yellow_cards (integer)
+            - home_red_cards (integer), away_red_cards (integer), season (varchar(20) DEFAULT '2024-2025')
+            - created_at (timestamp with time zone)
+
+            Available views for easier queries:
+
+            match_results:
+            - All match data with league_name, country, winner, total_goals
+
+            team_stats:
+            - Team statistics including wins, draws, losses, goals_for, goals_against per team/league/season
+
+            Available season: '2024-2025' (single season only)
 
             Football terminology mappings:
             {football_mappings}
@@ -44,16 +88,37 @@ class SQLChain:
             Relevant schema context:
             {schema_context}
 
-            Rules:
-            1. Always use proper table and column names
-            2. Include season filter unless querying across seasons
-            3. Use appropriate JOINs when combining tables
-            4. Add LIMIT clause for large result sets
-            5. Use team names exactly as stored (e.g., 'Man City' not 'Manchester City')
-            6. Position values are: 'GK', 'DEF', 'MID', 'FWD'
-            7. CRITICAL: SQL clause order MUST be: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT
-            8. NEVER put WHERE after GROUP BY - WHERE must come BEFORE GROUP BY
-            9. When using aggregates (SUM, COUNT, AVG), GROUP BY is required for non-aggregate columns
+            POSTGRESQL/SUPABASE RULES (CRITICAL):
+            1. Use EXACT column names from schema above - NO variations allowed
+            2. Date field: Use 'match_date' NOT 'date' or 'kickoff_time' for match dates
+            3. Text comparisons: Use single quotes 'text' NOT double quotes "text"
+            4. League codes: Use exact codes (E0, SP1, D1, etc.) NOT league names in div column
+            5. Team names: Use exact team names from database (Real Madrid, Man United, Liverpool, etc.)
+            6. Season format: Use exact format '2024-2025' only
+            7. Result values: 'H' (home win), 'A' (away win), 'D' (draw) - exact case
+            8. SQL clause order: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT
+            9. NEVER put WHERE after GROUP BY - WHERE must come BEFORE GROUP BY
+            10. When using aggregates (SUM, COUNT, AVG), GROUP BY is required for non-aggregate columns
+            11. Add LIMIT clause for large result sets to prevent timeouts
+            12. Use proper PostgreSQL syntax for all operations
+            13. Join teams table when you need team information by league
+            14. Join leagues table when you need league names or country information
+
+            EXAMPLES OF CORRECT vs INCORRECT SQL:
+            ❌ WRONG: WHERE date > '2024-01-01'
+            ✅ CORRECT: WHERE match_date > '2024-01-01'
+
+            ❌ WRONG: WHERE div = 'Premier League'
+            ✅ CORRECT: WHERE div = 'E0'
+
+            ❌ WRONG: WHERE season = "2024-2025"
+            ✅ CORRECT: WHERE season = '2024-2025'
+
+            ❌ WRONG: SELECT * FROM matches WHERE league = 'England'
+            ✅ CORRECT: SELECT m.* FROM matches m JOIN leagues l ON m.div = l.code WHERE l.country = 'England'
+
+            The season parameter provided in this request is: {season}
+            ALWAYS use this exact season value unless explicitly told otherwise.
 
             Generate only the SQL query, no explanations."""),
             ("user", "{question}")
@@ -108,6 +173,9 @@ class SQLChain:
         if hints.get("needs_season") and season not in sql:
             sql = self._add_season_filter(sql, season)
 
+        # Validate season usage - ensure request season is used
+        sql = self._validate_season_usage(sql, season)
+
         # Execute query
         results = await self._execute_query(sql)
 
@@ -133,14 +201,88 @@ class SQLChain:
     async def _generate_sql(self, **kwargs) -> str:
         """Generate SQL query using LangChain"""
         try:
+            if not self.llm:
+                raise ValueError("LLM not initialized")
             response = await self.llm.ainvoke(
                 self.prompt.format_messages(**kwargs)
             )
-            return response.content
+            # Ensure we return a string
+            content = response.content
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
         except Exception as e:
             print(f"Error generating SQL: {e}")
-            # Fallback to simple query
-            return f"SELECT * FROM matches WHERE season = '{kwargs.get('season', '2024-2025')}' LIMIT 10"
+            # Use pattern-based fallback for common questions
+            return self._generate_fallback_sql(kwargs.get('question', ''), kwargs.get('season', '2024-2025'))
+
+    def _generate_fallback_sql(self, question: str, season: str) -> str:
+        """Generate SQL using pattern matching when OpenAI is unavailable"""
+        question_lower = question.lower()
+
+        # Common query patterns for European leagues
+        if "home record" in question_lower or "best home" in question_lower:
+            return f"""SELECT home_team,
+                COUNT(*) as total_games,
+                SUM(CASE WHEN result = 'H' THEN 1 ELSE 0 END) as wins,
+                SUM(CASE WHEN result = 'D' THEN 1 ELSE 0 END) as draws,
+                SUM(CASE WHEN result = 'A' THEN 1 ELSE 0 END) as losses,
+                SUM(home_score) as goals_for,
+                SUM(away_score) as goals_against
+                FROM matches
+                WHERE season = '{season}'
+                GROUP BY home_team
+                ORDER BY wins DESC LIMIT 10"""
+
+        elif "highest scoring" in question_lower or "most goals" in question_lower:
+            return f"""SELECT home_team, away_team, home_score, away_score,
+                (home_score + away_score) as total_goals, match_date
+                FROM matches
+                WHERE season = '{season}'
+                ORDER BY total_goals DESC LIMIT 10"""
+
+        elif "premier league" in question_lower or "england" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'England'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "la liga" in question_lower or "spain" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Spain'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "bundesliga" in question_lower or "germany" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Germany'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "serie a" in question_lower or "italy" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Italy'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "team stats" in question_lower or "table" in question_lower:
+            return f"""SELECT * FROM team_stats
+                WHERE season = '{season}'
+                ORDER BY wins DESC, goals_for DESC LIMIT 20"""
+
+        else:
+            # Generic fallback - recent matches
+            return f"""SELECT m.home_team, m.away_team, m.home_score, m.away_score,
+                m.result, m.match_date, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}'
+                ORDER BY m.match_date DESC LIMIT 20"""
 
     def _clean_sql(self, sql: str) -> str:
         """Clean and format SQL query"""
@@ -150,11 +292,56 @@ class SQLChain:
         # Remove extra whitespace
         sql = " ".join(sql.split())
 
+        # Check for truncated queries (common issue)
+        if sql.count("(") != sql.count(")"):
+            print(f"⚠️  WARNING: Unbalanced parentheses detected in SQL: {sql}")
+            # Try to fix by completing common patterns
+            if "SUM(CASE WHEN" in sql and not sql.endswith("END)"):
+                sql += " END)"
+
+        # Check for incomplete column references
+        if sql.endswith("_sco") and "away_score" in sql:
+            sql = sql.replace("away_sco", "away_score")
+
+        # Fix conflicting WHERE conditions
+        import re
+
+        # Look for impossible conditions like season = 'A' AND season = 'B'
+        season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
+        if len(season_matches) > 1 and len(set(season_matches)) > 1:
+            print(f"🔧 FIXING: Found conflicting seasons: {season_matches}")
+
+            # Keep only the first season occurrence and remove all others
+            first_match = re.search(r"season\s*=\s*['\"][^'\"]+['\"]", sql, re.IGNORECASE)
+            if first_match:
+                first_season_clause = first_match.group(0)
+                # Remove all season clauses first
+                sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", "", sql, flags=re.IGNORECASE)
+                # Clean up extra AND/WHERE keywords left behind
+                sql = re.sub(r"\bAND\s+AND\b", "AND", sql, flags=re.IGNORECASE)
+                sql = re.sub(r"\bWHERE\s+AND\b", "WHERE", sql, flags=re.IGNORECASE)
+                sql = re.sub(r"\bAND\s+$", "", sql.strip(), flags=re.IGNORECASE)
+
+                # Add back the first season clause in the right place
+                if "WHERE" in sql.upper():
+                    # Insert after WHERE
+                    sql = re.sub(r"\bWHERE\b", f"WHERE {first_season_clause} AND", sql, count=1, flags=re.IGNORECASE)
+                else:
+                    # Add WHERE clause before GROUP BY/ORDER BY/LIMIT
+                    insert_pos = len(sql)
+                    for clause in ["GROUP BY", "ORDER BY", "LIMIT"]:
+                        match = re.search(rf"\b{clause}\b", sql, re.IGNORECASE)
+                        if match:
+                            insert_pos = min(insert_pos, match.start())
+
+                    sql = sql[:insert_pos].rstrip() + f" WHERE {first_season_clause} " + sql[insert_pos:]
+
+            print(f"🔧 FIXED SQL: {sql}")
+
         # Fix common SQL ordering issues
         # Check if WHERE is after GROUP BY (common GPT error)
         if "GROUP BY" in sql.upper() and "WHERE" in sql.upper():
             # Use case-insensitive search
-            import re
 
             # Find positions of clauses
             group_match = re.search(r'\bGROUP\s+BY\b', sql, re.IGNORECASE)
@@ -187,9 +374,62 @@ class SQLChain:
                     # Insert WHERE before GROUP BY
                     sql = sql[:group_match.start()].rstrip() + " " + where_clause + " " + sql[group_match.start():]
 
+        # Validate final query
+        if not self._validate_sql(sql):
+            print(f"⚠️  WARNING: Generated SQL may have issues: {sql}")
+
         # Ensure semicolon at end
         if not sql.strip().endswith(";"):
             sql = sql.strip() + ";"
+
+        return sql
+
+    def _validate_sql(self, sql: str) -> bool:
+        """Basic SQL validation"""
+        try:
+            import re
+            sql_upper = sql.upper()
+
+            # Check for basic requirements
+            if not sql_upper.strip().startswith("SELECT"):
+                return False
+
+            # Check for balanced parentheses
+            if sql.count("(") != sql.count(")"):
+                return False
+
+            # Check for incomplete expressions
+            incomplete_patterns = [
+                r'\w+_$',  # Ends with underscore
+                r'\w+_\s+(FROM|WHERE|GROUP|ORDER)',  # Truncated column names
+                r'=\s*$',  # Hanging equals
+                r'AND\s*$',  # Hanging AND
+            ]
+
+            for pattern in incomplete_patterns:
+                if re.search(pattern, sql, re.IGNORECASE):
+                    return False
+
+            return True
+
+        except Exception as e:
+            print(f"SQL validation error: {e}")
+            return False
+
+    def _validate_season_usage(self, sql: str, requested_season: str) -> str:
+        """Ensure the SQL uses the requested season parameter"""
+        import re
+
+        # Find all season references in the SQL
+        season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
+
+        # If there are seasons in the SQL but none match the requested season
+        if season_matches and requested_season not in season_matches:
+            print(f"🔧 SEASON VALIDATION: SQL uses {season_matches} but request asks for '{requested_season}'")
+
+            # Replace all season references with the requested season
+            sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{requested_season}'", sql, flags=re.IGNORECASE)
+            print(f"🔧 CORRECTED: Now using season = '{requested_season}'")
 
         return sql
 
@@ -259,8 +499,14 @@ class SQLChain:
         """
 
         try:
+            if not self.llm:
+                return "This query searches the football database based on your question."
             response = await self.llm.ainvoke(explanation_prompt)
-            return response.content
+            content = response.content
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
         except:
             return "This query searches the football database based on your question."
 
@@ -280,14 +526,26 @@ class SQLChain:
         """
 
         try:
+            if not self.llm:
+                return {
+                    "original_sql": sql,
+                    "optimized_sql": sql,
+                    "explanation": "Optimization requires LLM initialization",
+                    "suggestions": optimizations
+                }
+                
             response = await self.llm.ainvoke(optimize_prompt)
+            content = response.content
 
             # Parse response to extract optimized SQL
             optimized_sql = sql  # Fallback to original
+            
+            # Convert content to string if needed
+            content_str = str(content) if not isinstance(content, str) else content
 
             # Simple extraction (in production, use better parsing)
-            if "SELECT" in response.content:
-                lines = response.content.split("\n")
+            if "SELECT" in content_str:
+                lines = content_str.split("\n")
                 sql_lines = []
                 in_sql = False
 
@@ -305,7 +563,7 @@ class SQLChain:
             return {
                 "original_sql": sql,
                 "optimized_sql": self._clean_sql(optimized_sql),
-                "explanation": response.content,
+                "explanation": content_str,
                 "suggestions": optimizations
             }
 

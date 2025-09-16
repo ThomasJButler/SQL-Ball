@@ -25,15 +25,16 @@ export type PatternType =
 
 export class PatternDiscovery {
   
-  // Find upset victories (away team winning by 3+ goals)
-  async findUpsets(limit: number = 10): Promise<Pattern[]> {
+  // Find epic upset victories (away team winning by 2+ goals from European leagues)
+  async findUpsets(limit: number = 20): Promise<Pattern[]> {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .eq('finished', true)
+      .not('home_score', 'is', null)
+      .not('away_score', 'is', null)
       .gt('away_score', 0)
-      .order('kickoff_time', { ascending: false })
-      .limit(limit);
+      .order('match_date', { ascending: false })
+      .limit(Math.min(limit * 3, 100));
 
     if (error) throw error;
 
@@ -43,25 +44,26 @@ export class PatternDiscovery {
       (match.away_score - match.home_score) >= 2
     );
 
-    return upsets.map((match: any) => ({
+    return upsets.slice(0, limit).map((match: any) => ({
       id: match.id.toString(),
       type: 'upset' as PatternType,
-      title: `Major Upset: ${match.away_team} destroyed ${match.home_team}`,
-      description: `${match.away_team} won ${match.away_score}-${match.home_score} away at ${match.home_team} - a stunning ${match.away_score - match.home_score} goal victory!`,
+      title: `🚨 European Upset: ${match.away_team} destroyed ${match.home_team} (${match.div} League)`,
+      description: `${match.away_team} won ${match.away_score}-${match.home_score} away at ${match.home_team} - a stunning ${match.away_score - match.home_score} goal victory in the ${match.div} league!`,
       data: match,
       significance: (match.away_score - match.home_score) >= 4 ? 'very-high' : 'high',
       query: `SELECT * FROM matches WHERE id = ${match.id}`
     }));
   }
 
-  // Find high-scoring matches
-  async findHighScoringMatches(minGoals: number = 6): Promise<Pattern[]> {
+  // Find epic high-scoring European matches
+  async findHighScoringMatches(minGoals: number = 5): Promise<Pattern[]> {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .eq('finished', true)
-      .order('kickoff_time', { ascending: false })
-      .limit(100);
+      .not('home_score', 'is', null)
+      .not('away_score', 'is', null)
+      .order('match_date', { ascending: false })
+      .limit(200);
 
     if (error) throw error;
 
@@ -75,10 +77,10 @@ export class PatternDiscovery {
       return {
         id: match.id.toString(),
         type: 'high-scoring' as PatternType,
-        title: `Goal Fest: ${match.home_team} vs ${match.away_team}`,
-        description: `An incredible ${totalGoals} goals scored! ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`,
+        title: `⚽ ${totalGoals}-Goal Thriller: ${match.home_team} vs ${match.away_team} (${match.div})`,
+        description: `An incredible ${totalGoals} goals scored in the ${match.div} league! ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`,
         data: match,
-        significance: totalGoals >= 9 ? 'very-high' : totalGoals >= 7 ? 'high' : 'medium',
+        significance: totalGoals >= 8 ? 'very-high' : totalGoals >= 6 ? 'high' : 'medium',
         query: `SELECT * FROM matches WHERE (home_score + away_score) >= ${minGoals}`
       };
     });
@@ -89,24 +91,24 @@ export class PatternDiscovery {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .or('and(home_shots_on_target.gte.10,home_score.lte.1),and(away_shots_on_target.gte.10,away_score.lte.1)')
-      .order('date', { ascending: false })
-      .limit(15);
+      .or('and(home_shots_target.gte.10,home_score.lte.1),and(away_shots_target.gte.10,away_score.lte.1)')
+      .order('match_date', { ascending: false })
+      .limit(30);
 
     if (error) throw error;
 
     return (data as Match[]).map((match: Match) => {
-      const homeInefficient = (match.home_shots_on_target ?? 0) >= 10 && (match.home_score ?? 0) <= 1;
-      const awayInefficient = (match.away_shots_on_target ?? 0) >= 10 && (match.away_score ?? 0) <= 1;
+      const homeInefficient = (match.home_shots_target ?? 0) >= 10 && (match.home_score ?? 0) <= 1;
+      const awayInefficient = (match.away_shots_target ?? 0) >= 10 && (match.away_score ?? 0) <= 1;
       const team = homeInefficient ? match.home_team : match.away_team;
-      const shots = homeInefficient ? match.home_shots_on_target : match.away_shots_on_target;
+      const shots = homeInefficient ? match.home_shots_target : match.away_shots_target;
       const goals = homeInefficient ? match.home_score : match.away_score;
 
       return {
         id: match.id,
         type: 'inefficient' as PatternType,
-        title: `Wasteful: ${team} couldn't convert chances`,
-        description: `${team} had ${shots ?? 0} shots on target but only scored ${goals ?? 0} goal(s) - a conversion rate of ${shots ? (((goals ?? 0) / shots) * 100).toFixed(1) : '0.0'}%`,
+        title: `❌ Wasteful: ${team} couldn't finish (${match.div} League)`,
+        description: `${team} had ${shots ?? 0} shots on target but only scored ${goals ?? 0} goal(s) in the ${match.div} league - a shocking conversion rate of ${shots ? (((goals ?? 0) / shots) * 100).toFixed(1) : '0.0'}%`,
         data: match,
         significance: (shots ?? 0) >= 15 ? 'high' : 'medium',
         query: `SELECT * FROM matches WHERE id = '${match.id}'`
@@ -119,25 +121,25 @@ export class PatternDiscovery {
     const { data, error } = await supabase
       .from('matches')
       .select('*')
-      .or('and(half_time_result.eq.A,full_time_result.eq.H),and(half_time_result.eq.H,full_time_result.eq.A)')
-      .order('date', { ascending: false })
+      .or('and(ht_result.eq.A,result.eq.H),and(ht_result.eq.H,result.eq.A)')
+      .order('match_date', { ascending: false })
       .limit(20);
 
     if (error) throw error;
 
     return (data as Match[]).map((match: Match) => {
-      const homeComeback = match.half_time_result === 'A' && match.full_time_result === 'H';
+      const homeComeback = match.ht_result === 'A' && match.result === 'H';
       const team = homeComeback ? match.home_team : match.away_team;
       const opponent = homeComeback ? match.away_team : match.home_team;
 
       return {
         id: match.id,
         type: 'comeback' as PatternType,
-        title: `Comeback Kings: ${team} turned it around`,
-        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_goals ?? 0}-${match.away_goals ?? 0}`,
+        title: `🔥 Comeback Kings: ${team} turned it around (${match.div})`,
+        description: `${team} came from behind at half-time to beat ${opponent} ${match.home_score ?? 0}-${match.away_score ?? 0} in an epic ${match.div} league comeback!`,
         data: match,
         significance: 'high',
-        query: `SELECT * FROM matches WHERE half_time_result != full_time_result`
+        query: `SELECT * FROM matches WHERE ht_result != result`
       };
     });
   }
@@ -148,7 +150,7 @@ export class PatternDiscovery {
       .from('matches')
       .select('*')
       .filter('referee', 'not.is', null)
-      .order('date', { ascending: false });
+      .order('match_date', { ascending: false });
 
     if (error) throw error;
 
@@ -156,9 +158,9 @@ export class PatternDiscovery {
     const refereeStats = new Map<string, { matches: number, totalCards: number, redCards: number }>();
     
     data.forEach((match: Match) => {
-      const totalCards = (match.home_yellows || 0) + (match.away_yellows || 0) + 
-                        (match.home_reds || 0) + (match.away_reds || 0);
-      const redCards = (match.home_reds || 0) + (match.away_reds || 0);
+      const totalCards = (match.home_yellow_cards || 0) + (match.away_yellow_cards || 0) +
+                        (match.home_red_cards || 0) + (match.away_red_cards || 0);
+      const redCards = (match.home_red_cards || 0) + (match.away_red_cards || 0);
       
       const current = refereeStats.get(match.referee ?? '') || { matches: 0, totalCards: 0, redCards: 0 };
       refereeStats.set(match.referee ?? '', {
@@ -203,7 +205,7 @@ export class PatternDiscovery {
         .from('matches')
         .select('*')
         .or(`home_team.eq.${team},away_team.eq.${team}`)
-        .order('date', { ascending: false })
+        .order('match_date', { ascending: false })
         .limit(10);
 
       if (matches && matches.length >= 5) {
@@ -241,7 +243,7 @@ export class PatternDiscovery {
             description: `${team} has ${streakType === 'winning' ? 'won' : 'lost'} their last ${streak} matches`,
             data: { team, matches: matches.slice(0, streak) },
             significance: streak >= 5 ? 'very-high' : streak >= 4 ? 'high' : 'medium',
-            query: `SELECT * FROM matches WHERE home_team = '${team}' OR away_team = '${team}' ORDER BY date DESC LIMIT ${streak}`
+            query: `SELECT * FROM matches WHERE home_team = '${team}' OR away_team = '${team}' ORDER BY match_date DESC LIMIT ${streak}`
           });
         }
       }
@@ -250,24 +252,26 @@ export class PatternDiscovery {
     return patterns;
   }
 
-  // Main discovery method
+  // Epic European league pattern discovery
   async discoverPatterns(): Promise<Pattern[]> {
     try {
-      const [upsets, highScoring, inefficiencies] = await Promise.all([
-        this.findUpsets(10),
+      console.log('🔍 Discovering patterns across 7,681 European league matches...');
+
+      const [upsets, highScoring, inefficiencies, comebacks, refereePatterns] = await Promise.all([
+        this.findUpsets(15),
         this.findHighScoringMatches(),
-        this.findInefficiencies()
-        // this.findComebacks(),
-        // this.findRefereePatterns(),
-        // this.findTeamStreaks()
+        this.findInefficiencies(),
+        this.findComebacks(),
+        this.findRefereePatterns()
+        // this.findTeamStreaks() // Keep this commented as it's expensive
       ]);
 
       const allPatterns = [
         ...upsets,
         ...highScoring,
-        ...inefficiencies
-        // ...comebacks,
-        // ...refereePatterns,
+        ...inefficiencies,
+        ...comebacks,
+        ...refereePatterns
         // ...streaks
       ].filter(p => p && p.id);
 
