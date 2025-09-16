@@ -32,16 +32,55 @@ class SQLChain:
 
         # Create prompt template
         self.prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert SQL query generator for a football (soccer) analytics database.
+            ("system", """You are an expert PostgreSQL query generator for a Supabase football (soccer) analytics database.
 
-            Database Schema:
-            - teams: id, code, name, short_name, season, elo, strength
-            - players: id, player_id, web_name, position (GK/DEF/MID/FWD), team_code, season
-            - matches: id, gameweek, home_team, away_team, home_score, away_score, home_xg, away_xg, season, finished
-            - player_stats: id, player_id, gameweek, total_points, goals_scored, assists, expected_goals, form, season
-            - player_match_stats: id, player_id, gameweek, minutes_played, goals, assists, xg, xa, season
+            EXACT DATABASE SCHEMA (PostgreSQL/Supabase):
 
-            Available seasons (choose ONE per query unless explicitly asked for cross-season analysis): '2024-2025', '2025-2026'
+            European Football Leagues Database - 22 leagues across 11 countries
+
+            Tables and ALL columns:
+
+            leagues:
+            - id (integer, PRIMARY KEY), code (varchar(10), UNIQUE), name (varchar(100)), country (varchar(50))
+            - tier (integer), season (varchar(20) DEFAULT '2024-2025'), created_at (timestamp with time zone)
+
+            Available leagues:
+            - England: E0 (Premier League), E1 (Championship), E2 (League One), E3 (League Two), EC (National League)
+            - Spain: SP1 (La Liga), SP2 (Segunda División)
+            - Germany: D1 (Bundesliga), D2 (2. Bundesliga)
+            - Italy: I1 (Serie A), I2 (Serie B)
+            - France: F1 (Ligue 1), F2 (Ligue 2)
+            - Netherlands: N1 (Eredivisie)
+            - Belgium: B1 (Pro League)
+            - Portugal: P1 (Primeira Liga)
+            - Turkey: T1 (Süper Lig)
+            - Greece: G1 (Super League)
+            - Scotland: SC0 (Premiership), SC1 (Championship), SC2 (League One), SC3 (League Two)
+
+            teams:
+            - id (integer, PRIMARY KEY), name (varchar(100)), league_code (varchar(10) REFERENCES leagues(code))
+            - season (varchar(20) DEFAULT '2024-2025'), created_at (timestamp with time zone)
+            - UNIQUE constraint on (name, league_code, season)
+
+            matches:
+            - id (integer, PRIMARY KEY), div (varchar(10) REFERENCES leagues(code)), match_date (date), match_time (time)
+            - home_team (varchar(100)), away_team (varchar(100)), home_score (integer), away_score (integer)
+            - result (char(1): H/A/D), ht_home_score (integer), ht_away_score (integer), ht_result (char(1): H/A/D)
+            - referee (varchar(100)), home_shots (integer), away_shots (integer)
+            - home_shots_target (integer), away_shots_target (integer), home_fouls (integer), away_fouls (integer)
+            - home_corners (integer), away_corners (integer), home_yellow_cards (integer), away_yellow_cards (integer)
+            - home_red_cards (integer), away_red_cards (integer), season (varchar(20) DEFAULT '2024-2025')
+            - created_at (timestamp with time zone)
+
+            Available views for easier queries:
+
+            match_results:
+            - All match data with league_name, country, winner, total_goals
+
+            team_stats:
+            - Team statistics including wins, draws, losses, goals_for, goals_against per team/league/season
+
+            Available season: '2024-2025' (single season only)
 
             Football terminology mappings:
             {football_mappings}
@@ -49,25 +88,34 @@ class SQLChain:
             Relevant schema context:
             {schema_context}
 
-            Rules:
-            1. Always use proper table and column names
-            2. Include season filter unless querying across seasons
-            3. Use appropriate JOINs when combining tables
-            4. Add LIMIT clause for large result sets
-            5. Use team names exactly as stored (e.g., 'Man City' not 'Manchester City')
-            6. Position values are: 'GK', 'DEF', 'MID', 'FWD'
-            7. CRITICAL: SQL clause order MUST be: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT
-            8. NEVER put WHERE after GROUP BY - WHERE must come BEFORE GROUP BY
-            9. When using aggregates (SUM, COUNT, AVG), GROUP BY is required for non-aggregate columns
-            10. CRITICAL: Use only ONE season per query - do NOT use multiple season conditions like 'season = A AND season = B'
-            11. If no specific season mentioned in question, use the season parameter provided in the request
+            POSTGRESQL/SUPABASE RULES (CRITICAL):
+            1. Use EXACT column names from schema above - NO variations allowed
+            2. Date field: Use 'match_date' NOT 'date' or 'kickoff_time' for match dates
+            3. Text comparisons: Use single quotes 'text' NOT double quotes "text"
+            4. League codes: Use exact codes (E0, SP1, D1, etc.) NOT league names in div column
+            5. Team names: Use exact team names from database (Real Madrid, Man United, Liverpool, etc.)
+            6. Season format: Use exact format '2024-2025' only
+            7. Result values: 'H' (home win), 'A' (away win), 'D' (draw) - exact case
+            8. SQL clause order: SELECT, FROM, JOIN, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT
+            9. NEVER put WHERE after GROUP BY - WHERE must come BEFORE GROUP BY
+            10. When using aggregates (SUM, COUNT, AVG), GROUP BY is required for non-aggregate columns
+            11. Add LIMIT clause for large result sets to prevent timeouts
+            12. Use proper PostgreSQL syntax for all operations
+            13. Join teams table when you need team information by league
+            14. Join leagues table when you need league names or country information
 
             EXAMPLES OF CORRECT vs INCORRECT SQL:
-            ❌ WRONG: WHERE season = '2024-2025' AND season = '2025-2026'
+            ❌ WRONG: WHERE date > '2024-01-01'
+            ✅ CORRECT: WHERE match_date > '2024-01-01'
+
+            ❌ WRONG: WHERE div = 'Premier League'
+            ✅ CORRECT: WHERE div = 'E0'
+
+            ❌ WRONG: WHERE season = "2024-2025"
             ✅ CORRECT: WHERE season = '2024-2025'
 
-            ❌ WRONG: Multiple seasons in same query
-            ✅ CORRECT: Pick ONE season only
+            ❌ WRONG: SELECT * FROM matches WHERE league = 'England'
+            ✅ CORRECT: SELECT m.* FROM matches m JOIN leagues l ON m.div = l.code WHERE l.country = 'England'
 
             The season parameter provided in this request is: {season}
             ALWAYS use this exact season value unless explicitly told otherwise.
@@ -173,45 +221,68 @@ class SQLChain:
         """Generate SQL using pattern matching when OpenAI is unavailable"""
         question_lower = question.lower()
 
-        # Common query patterns
+        # Common query patterns for European leagues
         if "home record" in question_lower or "best home" in question_lower:
             return f"""SELECT home_team,
                 COUNT(*) as total_games,
-                SUM(CASE WHEN home_score > away_score THEN 1 ELSE 0 END) as wins,
-                SUM(CASE WHEN home_score = away_score THEN 1 ELSE 0 END) as draws,
-                SUM(CASE WHEN home_score < away_score THEN 1 ELSE 0 END) as losses
+                SUM(CASE WHEN result = 'H' THEN 1 ELSE 0 END) as wins,
+                SUM(CASE WHEN result = 'D' THEN 1 ELSE 0 END) as draws,
+                SUM(CASE WHEN result = 'A' THEN 1 ELSE 0 END) as losses,
+                SUM(home_score) as goals_for,
+                SUM(away_score) as goals_against
                 FROM matches
-                WHERE season = '{season}' AND finished = 1
+                WHERE season = '{season}'
                 GROUP BY home_team
                 ORDER BY wins DESC LIMIT 10"""
 
-        elif "top scorer" in question_lower or "most goals" in question_lower:
-            return f"""SELECT web_name, SUM(goals_scored) as total_goals
-                FROM players p
-                JOIN player_stats ps ON p.player_id = ps.player_id
-                WHERE p.season = '{season}'
-                GROUP BY p.player_id, web_name
+        elif "highest scoring" in question_lower or "most goals" in question_lower:
+            return f"""SELECT home_team, away_team, home_score, away_score,
+                (home_score + away_score) as total_goals, match_date
+                FROM matches
+                WHERE season = '{season}'
                 ORDER BY total_goals DESC LIMIT 10"""
 
-        elif "clean sheet" in question_lower:
-            return f"""SELECT web_name, COUNT(*) as clean_sheets
-                FROM players p
-                JOIN player_stats ps ON p.player_id = ps.player_id
-                WHERE p.season = '{season}' AND position = 'GK' AND ps.goals_conceded = 0
-                GROUP BY p.player_id, web_name
-                ORDER BY clean_sheets DESC LIMIT 10"""
+        elif "premier league" in question_lower or "england" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'England'
+                ORDER BY m.match_date DESC LIMIT 20"""
 
-        elif "assist" in question_lower:
-            return f"""SELECT web_name, SUM(assists) as total_assists
-                FROM players p
-                JOIN player_stats ps ON p.player_id = ps.player_id
-                WHERE p.season = '{season}'
-                GROUP BY p.player_id, web_name
-                ORDER BY total_assists DESC LIMIT 10"""
+        elif "la liga" in question_lower or "spain" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Spain'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "bundesliga" in question_lower or "germany" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Germany'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "serie a" in question_lower or "italy" in question_lower:
+            return f"""SELECT m.*, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}' AND l.country = 'Italy'
+                ORDER BY m.match_date DESC LIMIT 20"""
+
+        elif "team stats" in question_lower or "table" in question_lower:
+            return f"""SELECT * FROM team_stats
+                WHERE season = '{season}'
+                ORDER BY wins DESC, goals_for DESC LIMIT 20"""
 
         else:
-            # Generic fallback
-            return f"SELECT * FROM matches WHERE season = '{season}' AND finished = 1 ORDER BY gameweek DESC LIMIT 10"
+            # Generic fallback - recent matches
+            return f"""SELECT m.home_team, m.away_team, m.home_score, m.away_score,
+                m.result, m.match_date, l.name as league_name
+                FROM matches m
+                JOIN leagues l ON m.div = l.code
+                WHERE m.season = '{season}'
+                ORDER BY m.match_date DESC LIMIT 20"""
 
     def _clean_sql(self, sql: str) -> str:
         """Clean and format SQL query"""

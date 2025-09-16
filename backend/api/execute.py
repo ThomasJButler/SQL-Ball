@@ -64,6 +64,16 @@ async def execute_sql_query(request: ExecuteRequest):
             clean_sql = re.sub(r"\bAND\s+season\s*=\s*['\"][^'\"]+['\"]", "", clean_sql, flags=re.IGNORECASE)
             clean_sql = re.sub(r"\bAND\s+AND\b", "AND", clean_sql, flags=re.IGNORECASE)
             print(f"🔧 EXECUTE: Fixed to use only '{first_season}': {clean_sql}")
+
+        # CRITICAL POSTGRESQL FIXES:
+        # Fix boolean comparisons: finished = 1 -> finished = true
+        clean_sql = re.sub(r'\bfinished\s*=\s*1\b', 'finished = true', clean_sql, flags=re.IGNORECASE)
+        clean_sql = re.sub(r'\bfinished\s*=\s*0\b', 'finished = false', clean_sql, flags=re.IGNORECASE)
+
+        # Fix column names that don't exist
+        clean_sql = re.sub(r'\bdate\b', 'kickoff_time', clean_sql, flags=re.IGNORECASE)
+
+        print(f"🔧 EXECUTE: Applied PostgreSQL fixes: {clean_sql}")
         
         print(f"🔍 DEBUG: Fixed SQL query: {clean_sql}")
         
