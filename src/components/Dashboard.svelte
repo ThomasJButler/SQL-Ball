@@ -13,15 +13,14 @@
     Filler,
     type ChartData
   } from 'chart.js';
-  import { dataService } from '../services/dataService';
-  import { PatternDiscovery } from '../lib/analytics/patternDiscovery';
-  import type { Match } from '../types';
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
   import { TrendingUp, Users, Target, BarChart2 } from 'lucide-svelte';
+  import { supabase, hasValidSupabaseConfig, getRecentMatches } from '../lib/supabase';
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
-  import { supabase } from '../lib/supabase';
+  import type { Match } from '../types';
+
   ChartJS.register(
     Title,
     Tooltip,
@@ -34,245 +33,252 @@
   );
 
   let recentMatches: Match[] = [];
-  let patterns: any[] = [];
-  let unusualMatches: any[] = [];
   let loading = true;
   let error: string | null = null;
-  let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
-  let patternsFound = tweened(0, { duration: 1800, easing: cubicOut });
-  let anomaliesDetected = tweened(0, { duration: 1200, easing: cubicOut });
-  let queriesExecuted = tweened(0, { duration: 1400, easing: cubicOut });
-  
-  // Temporary variables for template compatibility
-  let overallAccuracy = tweened(0, { duration: 1500, easing: cubicOut });
-  let profitMargin = tweened(0, { duration: 1500, easing: cubicOut });
-  let upcomingPredictions = 0;
-  let topPredictions: any[] = [];
-  let realMatchData: Match[] = [];
 
-  let recentPerformance: ChartData<"line", number[], string> = {
-    labels: [] as string[],
+  // Animated counters
+  let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
+  let totalGoals = tweened(0, { duration: 1800, easing: cubicOut });
+  let averageGoals = tweened(0, { duration: 1200, easing: cubicOut });
+  let queriesExecuted = tweened(0, { duration: 1400, easing: cubicOut });
+
+  // Statistics
+  let homeWinPercentage = 0;
+  let mostCommonScore = '0-0';
+  let topScoringTeam = '';
+  let totalTeams = 0;
+
+  let goalsChart: ChartData<"line", number[], string> = {
+    labels: [],
     datasets: [{
-      label: 'Patterns Discovered',
-      data: [] as number[],
-      borderColor: '#00ff00',
+      label: 'Goals per Match',
+      data: [],
+      borderColor: '#10b981',
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
       tension: 0.4,
-      fill: false
+      fill: true
     }]
   };
 
-  // Analytics tracking variables
-  let averageGoalsPerMatch = 0;
-  let mostCommonScore = '0-0';
-  let homeWinPercentage = 0;
-  let topScoringTeam = '';
+  let chartCanvas: HTMLCanvasElement;
 
-  let profitChartCanvas: HTMLCanvasElement;
-
-  // Reactive stats that update with animations
   $: stats = [
     {
       title: 'Total Matches',
-      value: $totalMatches.toLocaleString(),
-      change: '+38 this week',
+      value: $totalMatches.toFixed(0),
+      change: `${totalTeams} teams`,
       icon: Target,
       color: 'text-green-500 dark:text-green-400',
       bgColor: 'bg-green-500/10 dark:bg-green-500/20'
     },
     {
-      title: 'Patterns Found',
-      value: $patternsFound.toLocaleString(),
-      change: '+12 new',
+      title: 'Total Goals',
+      value: $totalGoals.toFixed(0),
+      change: `${$averageGoals.toFixed(1)} per match`,
       icon: TrendingUp,
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20'
     },
     {
-      title: 'Anomalies',
-      value: $anomaliesDetected.toLocaleString(),
-      change: '+5 unusual',
+      title: 'Home Win %',
+      value: `${homeWinPercentage.toFixed(1)}%`,
+      change: mostCommonScore ? `${mostCommonScore} most common` : 'Calculating...',
       icon: Users,
       color: 'text-sky-600 dark:text-sky-400',
       bgColor: 'bg-sky-500/10 dark:bg-sky-500/20'
     },
     {
       title: 'Queries Run',
-      value: $queriesExecuted.toLocaleString(),
-      change: '+234 today',
+      value: $queriesExecuted.toFixed(0),
+      change: 'Today',
       icon: BarChart2,
       color: 'text-amber-600 dark:text-amber-400',
       bgColor: 'bg-amber-500/10 dark:bg-amber-500/20'
     }
   ];
 
-  export async function refresh() {
-    await loadDashboardData();
-  }
-
-  async function loadRealStats() {
-    try {
-      // Get total matches
-      const { count: matchCount } = await supabase
-        .from('matches')
-        .select('*', { count: 'exact', head: true })
-        .eq('finished', true);
-
-      // Get total players
-      const { count: playerCount } = await supabase
-        .from('players')
-        .select('*', { count: 'exact', head: true });
-
-      // Update animated counters
-      totalMatches.set(matchCount || 0);
-      patternsFound.set(42); // Will be updated when patterns load
-      anomaliesDetected.set(8);
-      queriesExecuted.set(localStorage.getItem('query_count') ? parseInt(localStorage.getItem('query_count')) : 156);
-
-      return { matchCount, playerCount };
-    } catch (err) {
-      console.error('Error loading stats:', err);
-      return { matchCount: 0, playerCount: 0 };
-    }
-  }
-  
   async function loadDashboardData() {
     try {
       loading = true;
       error = null;
 
-      // Get recent matches and stats from Supabase
-      const [recent, statsData] = await Promise.all([
-        dataService.getMatches({ recent: true, days: 30 }),
-        loadRealStats()
-      ]);
-
-      recentMatches = recent;
-      realMatchData = recent.slice(0, 5); // Show 5 recent matches
-      
-      if (recentMatches.length === 0) {
-        error = "No matches found for the current season";
+      if (!hasValidSupabaseConfig()) {
+        // Use demo data
+        recentMatches = await getRecentMatches(50);
+        calculateStats(recentMatches);
+        loading = false;
         return;
       }
 
-      // Calculate analytics statistics
-      const matchesWithResults = recentMatches.filter(m => m.result);
-      
-      // Calculate average goals per match
-      const totalGoals = matchesWithResults.reduce((sum, match) => {
-        return sum + (match.home_goals || 0) + (match.away_goals || 0);
-      }, 0);
-      averageGoalsPerMatch = matchesWithResults.length > 0 ? totalGoals / matchesWithResults.length : 0;
-      
-      // Find most common score
-      const scoreFrequency = new Map<string, number>();
-      matchesWithResults.forEach(match => {
-        const score = `${match.home_goals}-${match.away_goals}`;
-        scoreFrequency.set(score, (scoreFrequency.get(score) || 0) + 1);
-      });
-      
-      let maxFreq = 0;
-      scoreFrequency.forEach((freq, score) => {
-        if (freq > maxFreq) {
-          maxFreq = freq;
-          mostCommonScore = score;
-        }
-      });
-      
-      // Calculate home win percentage
-      const homeWins = matchesWithResults.filter(m => m.result === 'H').length;
-      homeWinPercentage = matchesWithResults.length > 0 ? (homeWins / matchesWithResults.length) * 100 : 0;
-      
-      // Find top scoring team
-      const teamGoals = new Map<string, number>();
-      matchesWithResults.forEach(match => {
-        teamGoals.set(match.home_team, (teamGoals.get(match.home_team) || 0) + (match.home_goals || 0));
-        teamGoals.set(match.away_team, (teamGoals.get(match.away_team) || 0) + (match.away_goals || 0));
-      });
-      
-      let maxGoals = 0;
-      teamGoals.forEach((goals, team) => {
-        if (goals > maxGoals) {
-          maxGoals = goals;
-          topScoringTeam = team;
-        }
-      });
-      
-      // Update chart data for patterns discovered over time
-      recentPerformance.labels = recentMatches
-        .slice(0, 5)
-        .map(match => format(new Date(match.date), 'MMM d'));
-      recentPerformance.datasets[0].data = Array.from({length: 5}, () => Math.floor(Math.random() * 10 + 5));
-      
+      // Fetch all matches for statistics
+      const { data: allMatches, error: matchError } = await supabase
+        .from('matches')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (matchError) {
+        console.error('Error fetching matches:', matchError);
+        error = 'Failed to load match data';
+        return;
+      }
+
+      recentMatches = (allMatches || []) as Match[];
+      calculateStats(recentMatches);
+
+      // Update query count
+      const savedCount = localStorage.getItem('query_count');
+      queriesExecuted.set(savedCount ? parseInt(savedCount) : 0);
+
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      error = "Failed to load dashboard data";
+      console.error('Dashboard error:', err);
+      error = 'Failed to load dashboard data';
     } finally {
       loading = false;
     }
   }
 
+  function calculateStats(matches: Match[]) {
+    if (!matches || matches.length === 0) return;
+
+    // Filter matches with valid results
+    const validMatches = matches.filter(m =>
+      m.home_goals !== null &&
+      m.away_goals !== null
+    );
+
+    // Total matches and goals
+    totalMatches.set(validMatches.length);
+
+    const goals = validMatches.reduce((sum, m) =>
+      sum + (m.home_goals || 0) + (m.away_goals || 0), 0
+    );
+    totalGoals.set(goals);
+
+    const avgGoals = validMatches.length > 0 ? goals / validMatches.length : 0;
+    averageGoals.set(avgGoals);
+
+    // Home win percentage
+    const homeWins = validMatches.filter(m => m.result === 'H').length;
+    homeWinPercentage = validMatches.length > 0
+      ? (homeWins / validMatches.length) * 100
+      : 0;
+
+    // Most common score
+    const scoreMap = new Map<string, number>();
+    validMatches.forEach(m => {
+      const score = `${m.home_goals}-${m.away_goals}`;
+      scoreMap.set(score, (scoreMap.get(score) || 0) + 1);
+    });
+
+    let maxCount = 0;
+    scoreMap.forEach((count, score) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonScore = score;
+      }
+    });
+
+    // Count unique teams
+    const teams = new Set<string>();
+    validMatches.forEach(m => {
+      teams.add(m.home_team);
+      teams.add(m.away_team);
+    });
+    totalTeams = teams.size;
+
+    // Top scoring team
+    const teamGoals = new Map<string, number>();
+    validMatches.forEach(m => {
+      teamGoals.set(m.home_team,
+        (teamGoals.get(m.home_team) || 0) + (m.home_goals || 0)
+      );
+      teamGoals.set(m.away_team,
+        (teamGoals.get(m.away_team) || 0) + (m.away_goals || 0)
+      );
+    });
+
+    let maxGoals = 0;
+    teamGoals.forEach((goals, team) => {
+      if (goals > maxGoals) {
+        maxGoals = goals;
+        topScoringTeam = team;
+      }
+    });
+
+    // Update chart data - last 10 matches
+    const last10 = validMatches.slice(0, 10).reverse();
+    goalsChart.labels = last10.map(m =>
+      format(new Date(m.date), 'MMM d')
+    );
+    goalsChart.datasets[0].data = last10.map(m =>
+      (m.home_goals || 0) + (m.away_goals || 0)
+    );
+  }
+
   onMount(() => {
     loadDashboardData();
 
-    const ctx = profitChartCanvas.getContext('2d');
-    if (ctx) {
-      new ChartJS(ctx, {
-        type: 'line',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          datasets: [{
-            label: 'Patterns Discovered',
-            data: [12, 18, 15, 25, 22, 28],
-            borderColor: '#00ff00',
-            backgroundColor: 'rgba(0, 255, 0, 0.1)',
-            tension: 0.4,
-            fill: true,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: 'hsla(var(--text-base) / 0.1)'
-              },
-              ticks: {
-                 color: 'hsl(var(--text-muted))'
+    // Initialize patterns chart
+    if (chartCanvas) {
+      const ctx = chartCanvas.getContext('2d');
+      if (ctx) {
+        new ChartJS(ctx, {
+          type: 'line',
+          data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+              label: 'Matches Analyzed',
+              data: [12, 18, 25, 30],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.4,
+              fill: true,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
               }
             },
-            x: {
-               grid: {
-                display: false
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(156, 163, 175, 0.1)'
+                },
+                ticks: {
+                  color: 'rgb(156, 163, 175)'
+                }
               },
-              ticks: {
-                 color: 'hsl(var(--text-muted))'
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  color: 'rgb(156, 163, 175)'
+                }
               }
             }
-          },
-          plugins: {
-            legend: {
-              display: false
-            }
           }
-        }
-      });
+        });
+      }
     }
   });
 </script>
 
 <div class="space-y-8">
-  <!-- 🚀 STUNNING HERO SECTION -->
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 p-8 text-white animate-slide-in-up">
-    <!-- Animated background elements -->
+  <!-- Hero Section -->
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 p-8 text-white">
+    <!-- Animated background -->
     <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full animate-float" style="animation-delay: 0s;"></div>
+      <div class="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full animate-float"></div>
       <div class="absolute top-20 -right-10 w-32 h-32 bg-white/5 rounded-full animate-float" style="animation-delay: 2s;"></div>
       <div class="absolute -bottom-10 left-20 w-36 h-36 bg-white/5 rounded-full animate-float" style="animation-delay: 4s;"></div>
     </div>
-    
-    <!-- Hero content -->
+
     <div class="relative z-10">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div class="flex-1">
@@ -280,34 +286,33 @@
             <div class="w-3 h-3 bg-green-400 rounded-full live-pulse"></div>
             <span class="text-green-200 text-sm font-semibold tracking-wide uppercase">LIVE ANALYTICS</span>
           </div>
-          <h1 class="text-4xl md:text-5xl font-black mb-3 text-transparent bg-gradient-to-r from-white to-blue-100 bg-clip-text">
+          <h1 class="text-4xl md:text-5xl font-black mb-3">
             SQL-Ball Analytics
           </h1>
-          <p class="text-blue-100 text-lg md:text-xl mb-6 max-w-2xl">
+          <p class="text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
             RAG-powered natural language to SQL conversion for Premier League data insights
           </p>
-          
-          <!-- Quick stats row -->
+
+          <!-- Quick stats -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{averageGoalsPerMatch.toFixed(1)}</div>
-              <div class="text-xs text-blue-200">Avg Goals</div>
+              <div class="text-2xl font-bold">{$averageGoals.toFixed(1)}</div>
+              <div class="text-xs text-green-200">Avg Goals</div>
             </div>
             <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
               <div class="text-2xl font-bold">{homeWinPercentage.toFixed(1)}%</div>
-              <div class="text-xs text-blue-200">Home Wins</div>
+              <div class="text-xs text-green-200">Home Wins</div>
             </div>
             <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
               <div class="text-2xl font-bold">{mostCommonScore}</div>
-              <div class="text-xs text-blue-200">Common Score</div>
+              <div class="text-xs text-green-200">Common Score</div>
             </div>
             <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{recentMatches.length}</div>
-              <div class="text-xs text-blue-200">Matches</div>
+              <div class="text-2xl font-bold">{totalTeams}</div>
+              <div class="text-xs text-green-200">Teams</div>
             </div>
           </div>
         </div>
-        
       </div>
     </div>
   </div>
@@ -315,30 +320,40 @@
   <!-- Stats Grid -->
   {#if loading}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {#each Array(4) as _, i}
-        <div class="card-stats">
-          <div class="skeleton w-12 h-12 rounded-lg mb-3"></div>
-          <div class="skeleton h-4 w-24 mb-2"></div>
-          <div class="skeleton h-8 w-32 mb-2"></div>
-          <div class="skeleton h-3 w-20"></div>
+      {#each Array(4) as _}
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+          <div class="animate-pulse">
+            <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-lg mb-3"></div>
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2"></div>
+            <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded w-32 mb-2"></div>
+            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+          </div>
         </div>
       {/each}
     </div>
   {:else if error}
     <div class="p-8 text-center bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
       <p class="text-red-600 dark:text-red-400">{error}</p>
-      <button on:click={loadDashboardData} class="btn btn-primary mt-4">Retry</button>
+      <button on:click={loadDashboardData} class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+        Retry
+      </button>
     </div>
   {:else}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {#each stats as stat, i}
-        <div class="card-stats animate-float-subtle" style="animation-delay: {i * 100}ms">
-          <div class="stat-icon-wrapper {stat.bgColor}">
-            <svelte:component this={stat.icon} class="w-6 h-6 {stat.color}" />
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
+          <div class="flex items-start justify-between mb-4">
+            <div class="{stat.bgColor} p-3 rounded-lg">
+              <svelte:component this={stat.icon} class="w-6 h-6 {stat.color}" />
+            </div>
           </div>
-          <div class="stat-label">{stat.title}</div>
-          <div class="stat-value">{stat.value}</div>
-          <div class="stat-change {stat.change.startsWith('+') ? 'text-success dark:text-success-light' : 'text-error dark:text-error-light'}">
+          <div class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+            {stat.title}
+          </div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+            {stat.value}
+          </div>
+          <div class="text-xs text-slate-500 dark:text-slate-500">
             {stat.change}
           </div>
         </div>
@@ -346,136 +361,155 @@
     </div>
   {/if}
 
-  <!-- Charts Row -->
+  <!-- Charts -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="chart-container animate-slide-in-up" style="animation-delay: 400ms">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">Prediction Accuracy Trend</h3>
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Goals Trend</h3>
       <div class="h-64">
-        <Line data={recentPerformance} options={{ responsive: true, maintainAspectRatio: false }} />
+        {#if !loading && goalsChart.labels.length > 0}
+          <Line data={goalsChart} options={{ responsive: true, maintainAspectRatio: false }} />
+        {:else}
+          <div class="flex items-center justify-center h-full text-slate-400">
+            No data available
+          </div>
+        {/if}
       </div>
     </div>
-    <div class="chart-container animate-slide-in-up" style="animation-delay: 500ms">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">Patterns Discovered Over Time</h3>
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Analysis Progress</h3>
       <div class="h-64">
-        <canvas bind:this={profitChartCanvas}></canvas>
+        <canvas bind:this={chartCanvas}></canvas>
       </div>
     </div>
   </div>
 
-  <!-- How We Analyze Section -->
-  <div class="card card-glass animate-slide-in-up p-6" style="animation-delay: 800ms">
+  <!-- How We Analyze -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
     <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-      <Target class="w-5 h-5 text-primary" />
+      <Target class="w-5 h-5 text-green-500" />
       How We Analyze
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-2 flex items-center justify-center">
-          <BarChart2 class="w-4 h-4 text-blue-600" />
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <BarChart2 class="w-5 h-5 text-blue-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">RAG System</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL conversion</p>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
       </div>
-      <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-2 flex items-center justify-center">
-          <TrendingUp class="w-4 h-4 text-green-600" />
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-green-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
         <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
       </div>
-      <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-2 flex items-center justify-center">
-          <Users class="w-4 h-4 text-purple-600" />
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Users class="w-5 h-5 text-purple-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">Vector Embeddings</h4>
         <p class="text-xs text-slate-600 dark:text-slate-400">Semantic database search</p>
       </div>
-      <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-2 flex items-center justify-center">
-          <Target class="w-4 h-4 text-amber-600" />
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Target class="w-5 h-5 text-amber-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">Statistical Analysis</h4>
         <p class="text-xs text-slate-600 dark:text-slate-400">Historical trend analysis</p>
       </div>
     </div>
-    <div class="mt-4 p-3 bg-primary/10 dark:bg-primary/20 rounded-lg">
-      <p class="text-sm text-slate-700 dark:text-slate-300">
-        <strong>Live Analysis:</strong> Our system processes {recentMatches.length} recent matches, 
-        discovers {patterns.length} patterns, and analyzes {unusualMatches.length} unusual results using advanced RAG technology for 
-        natural language query processing.
-      </p>
-    </div>
   </div>
 
-  <!-- Recent Activity/Matches -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="lg:col-span-2 card card-glass animate-slide-in-up" style="animation-delay: 600ms">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Top Patterns Found</h3>
-      {#if loading}
-        <div class="space-y-3">
-          {#each Array(3) as _}
-            <div class="flex justify-between items-center p-2">
-              <div class="skeleton h-4 w-48"></div>
-              <div class="skeleton h-6 w-20 rounded-full"></div>
+  <!-- Recent Matches & Top Teams -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Recent Matches</h3>
+      <div class="space-y-3">
+        {#if loading}
+          <div class="animate-pulse space-y-3">
+            {#each Array(5) as _}
+              <div class="h-12 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            {/each}
+          </div>
+        {:else if recentMatches.length > 0}
+          {#each recentMatches.slice(0, 5) as match}
+            <div class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+              <div class="flex-1">
+                <div class="text-sm font-medium text-slate-900 dark:text-white">
+                  {match.home_team} vs {match.away_team}
+                </div>
+                <div class="text-xs text-slate-500">
+                  {format(new Date(match.date), 'MMM d, yyyy')}
+                </div>
+              </div>
+              <div class="text-lg font-bold text-slate-900 dark:text-white">
+                {match.home_goals ?? '-'} - {match.away_goals ?? '-'}
+              </div>
             </div>
           {/each}
-        </div>
-      {:else if patterns.length === 0}
-        <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-          <p>No patterns discovered yet</p>
-        </div>
-      {:else}
-        <ul class="space-y-3">
-          {#each patterns.slice(0, 5) as pattern, i}
-            <li class="flex justify-between items-center p-2 rounded hover:bg-primary/5" style="animation-delay: {i * 100}ms">
-              <div class="flex-1">
-                <span class="text-sm font-medium">{pattern.title}</span>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{pattern.description}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="badge badge-{pattern.significance === 'very-high' ? 'error' : pattern.significance === 'high' ? 'warning' : 'info'}">
-                  {pattern.significance}
-                </span>
-              </div>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
-    <div class="card card-glass animate-slide-in-up" style="animation-delay: 700ms">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Recent Unusual Matches</h3>
-      <ul class="space-y-2">
-        {#each unusualMatches.slice(0, 5) as match}
-          <li class="text-sm text-slate-500 dark:text-slate-400">
-            {match.home_team} vs {match.away_team}
-            <span class="block text-xs text-slate-400">
-              {format(new Date(match.date), 'MMM d, HH:mm')}
-            </span>
-          </li>
-        {/each}
-        {#if unusualMatches.length === 0}
-          <li class="text-sm text-slate-500 dark:text-slate-400">No upcoming matches</li>
+        {:else}
+          <p class="text-center text-slate-500">No matches available</p>
         {/if}
-      </ul>
-      <button class="btn btn-secondary btn-sm mt-4 w-full">View All Matches</button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Quick Stats</h3>
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600 dark:text-slate-400">Top Scoring Team</span>
+          <span class="font-semibold text-slate-900 dark:text-white">{topScoringTeam || 'N/A'}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600 dark:text-slate-400">Total Matches</span>
+          <span class="font-semibold text-slate-900 dark:text-white">{$totalMatches.toFixed(0)}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600 dark:text-slate-400">Total Goals</span>
+          <span class="font-semibold text-slate-900 dark:text-white">{$totalGoals.toFixed(0)}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600 dark:text-slate-400">Goals per Match</span>
+          <span class="font-semibold text-slate-900 dark:text-white">{$averageGoals.toFixed(2)}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-600 dark:text-slate-400">Most Common Score</span>
+          <span class="font-semibold text-slate-900 dark:text-white">{mostCommonScore}</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Enhanced Visualizations Section -->
-  <div class="animate-slide-in-up" style="animation-delay: 1000ms">
-    <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
-      <BarChart2 class="w-8 h-8 text-green-500" />
-      Advanced Match Analytics
-    </h2>
-    <EnhancedVisualizations matches={recentMatches} />
-  </div>
+  <!-- Enhanced Visualizations -->
+  {#if !loading && recentMatches.length > 0}
+    <div>
+      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
+        <BarChart2 class="w-8 h-8 text-green-500" />
+        Advanced Match Analytics
+      </h2>
+      <EnhancedVisualizations matches={recentMatches} />
+    </div>
+  {/if}
 </div>
 
-<style global lang="postcss">
-  .shadow-glow-warning-sm {
-    box-shadow: 0 0 8px hsla(39, 90%, 55%, 0.3), inset 0 0 10px hsla(39, 90%, 55%, 0.05);
+<style>
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(10deg); }
   }
-  .shadow-glow-warning-md {
-    box-shadow: 0 0 15px hsla(39, 90%, 55%, 0.4), inset 0 0 15px hsla(39, 90%, 55%, 0.1);
+
+  .animate-float {
+    animation: float 20s ease-in-out infinite;
+  }
+
+  .live-pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 </style>

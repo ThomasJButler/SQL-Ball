@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sun, Moon, Github, Menu, Search } from 'lucide-svelte';
+  import { Sun, Moon, Github, Menu } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let toggleSidebar: () => void;
@@ -7,7 +7,6 @@
   const dispatch = createEventDispatcher();
 
   let isDarkMode = false;
-  let searchQuery = '';
 
   function toggleTheme() {
     isDarkMode = !isDarkMode;
@@ -19,19 +18,6 @@
       localStorage.setItem('theme', 'light');
     }
     dispatch('toggleDarkMode');
-  }
-
-  function handleSearch() {
-    if (searchQuery.trim()) {
-      dispatch('search', { query: searchQuery });
-      searchQuery = '';
-    }
-  }
-
-  function handleSearchKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      handleSearch();
-    }
   }
 
   // Initialize theme based on saved preference
@@ -69,32 +55,6 @@
 
     <!-- Right side -->
     <div class="flex items-center gap-2">
-      <!-- Search Bar -->
-      <div class="relative hidden sm:flex items-center">
-        <input
-          type="text"
-          bind:value={searchQuery}
-          on:keydown={handleSearchKeydown}
-          placeholder="Search teams, players..."
-          class="w-64 px-4 py-2 pr-10 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-        />
-        <button
-          on:click={handleSearch}
-          class="absolute right-2 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors"
-          aria-label="Search"
-        >
-          <Search class="w-4 h-4 text-slate-400" />
-        </button>
-      </div>
-
-      <!-- Mobile search button -->
-      <button
-        class="sm:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        aria-label="Search"
-      >
-        <Search class="w-5 h-5 text-slate-600 dark:text-slate-400" />
-      </button>
-
       <!-- GitHub Link -->
       <a
         href="https://github.com/ThomasJButler/SQL-Ball"
