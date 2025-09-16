@@ -170,9 +170,9 @@ class DataService {
       let filteredMatches = matches;
 
       if (upcoming) {
-        filteredMatches = matches.filter(m => new Date(m.date) > now).slice(0, 20);
+        filteredMatches = matches.filter(m => new Date(m.match_date) > now).slice(0, 20);
       } else if (recent) {
-        filteredMatches = matches.filter(m => new Date(m.date) <= now).slice(0, 20);
+        filteredMatches = matches.filter(m => new Date(m.match_date) <= now).slice(0, 20);
       }
 
       if (filteredMatches.length > 0) {
