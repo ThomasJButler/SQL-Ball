@@ -132,34 +132,6 @@
     />
   {/if}
 
-  <!-- Floating Action Buttons -->
-  <div class="fixed bottom-6 right-6 z-40 flex flex-col gap-3">
-    <!-- Query Builder FAB -->
-    <button 
-      class="fab-button group"
-      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'Query Builder'}}))}
-      aria-label="Query Builder"
-    >
-      <div class="fab-icon">🔍</div>
-      <div class="fab-tooltip">Query Builder</div>
-    </button>
-    
-    <!-- AI Assistant FAB -->
-    <button 
-      class="fab-button group"
-      on:click={() => navigate(new CustomEvent('navigate', {detail: {view: 'AI Assistant'}}))}
-      aria-label="AI Assistant"
-    >
-      <div class="fab-icon">🤖</div>
-      <div class="fab-tooltip">AI Assistant</div>
-    </button>
-    
-    <!-- Live Status Indicator -->
-    <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 shadow-lg">
-      <div class="w-3 h-3 bg-white rounded-full live-pulse"></div>
-    </div>
-  </div>
-
 </div>
 
 <style global lang="postcss">
