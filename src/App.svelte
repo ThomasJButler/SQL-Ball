@@ -5,15 +5,12 @@
   import Footer from './components/Footer.svelte';
   import Dashboard from './components/Dashboard.svelte';
   import QueryBuilder from './components/QueryBuilder.svelte';
-  import SubmitQuery from './components/SubmitQuery.svelte';
   import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
   import SeasonStats from './components/SeasonStats.svelte';
   import Settings from './components/Settings.svelte';
   import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
   import Help from './components/Help.svelte';
-  import TopScorers from './components/TopScorers.svelte';
-  import PlayerProfile from './components/PlayerProfile.svelte';
   import { onMount } from 'svelte';
 
   let currentView = 'Dashboard'; // Default view
@@ -92,8 +89,6 @@
           <Dashboard bind:this={dashboardComponent} />
         {:else if currentView === 'Query Builder'}
           <QueryBuilder on:navigate={navigate} />
-        {:else if currentView === 'Submit Query'}
-          <SubmitQuery />
         {:else if currentView === 'Pattern Discovery'}
           <PatternDiscovery />
         {:else if currentView === 'AI Assistant'}
@@ -104,10 +99,6 @@
           <Settings />
         {:else if currentView === 'Help'}
           <Help />
-        {:else if currentView === 'Top Scorers'}
-          <TopScorers />
-        {:else if currentView === 'Player Profile'}
-          <PlayerProfile />
         {/if}
       </div>
     </main>
