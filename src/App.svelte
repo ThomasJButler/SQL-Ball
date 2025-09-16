@@ -2,6 +2,7 @@
   import Header from './components/Header.svelte';
   import Sidebar from './components/Sidebar.svelte';
   import MobileNav from './components/MobileNav.svelte';
+  import Footer from './components/Footer.svelte';
   import Dashboard from './components/Dashboard.svelte';
   import QueryBuilder from './components/QueryBuilder.svelte';
   import SubmitQuery from './components/SubmitQuery.svelte';
@@ -90,13 +91,13 @@
         {#if currentView === 'Dashboard'}
           <Dashboard bind:this={dashboardComponent} />
         {:else if currentView === 'Query Builder'}
-          <QueryBuilder />
+          <QueryBuilder on:navigate={navigate} />
         {:else if currentView === 'Submit Query'}
           <SubmitQuery />
         {:else if currentView === 'Pattern Discovery'}
           <PatternDiscovery />
         {:else if currentView === 'AI Assistant'}
-          <AiAssistant />
+          <AiAssistant on:navigate={navigate} />
         {:else if currentView === 'Season Stats'}
           <SeasonStats />
         {:else if currentView === 'Settings'}
@@ -110,8 +111,11 @@
         {/if}
       </div>
     </main>
+
+    <!-- Footer -->
+    <Footer />
   </div>
-  
+
   <!-- Mobile Navigation -->
   <MobileNav {currentView} on:navigate={navigate} />
 

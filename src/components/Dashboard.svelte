@@ -110,19 +110,25 @@
         return;
       }
 
-      // Fetch all matches for statistics
+      // Fetch 2025-2026 season matches for statistics
       const { data: allMatches, error: matchError } = await supabase
         .from('matches')
         .select('*')
+        .eq('season_id', '2025-26')
         .order('date', { ascending: false });
 
       if (matchError) {
         console.error('Error fetching matches:', matchError);
-        error = 'Failed to load match data';
-        return;
+        // Fallback to all matches if 2025-26 not found
+        const { data: fallbackMatches } = await supabase
+          .from('matches')
+          .select('*')
+          .order('date', { ascending: false })
+          .limit(20);
+        recentMatches = (fallbackMatches || []) as Match[];
+      } else {
+        recentMatches = (allMatches || []) as Match[];
       }
-
-      recentMatches = (allMatches || []) as Match[];
       calculateStats(recentMatches);
 
       // Update query count

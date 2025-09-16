@@ -53,6 +53,14 @@
     { value: '2025-2026', label: '2025-2026 Season' }
   ];
 
+  // Seasonal periods for 2024-2025
+  const seasonalPeriods = [
+    { value: 'summer-2024', label: 'Summer 2024', icon: '☀️' },
+    { value: 'autumn-2024', label: 'Autumn 2024', icon: '🍂' },
+    { value: 'winter-2025', label: 'Winter 2025', icon: '❄️' },
+    { value: 'spring-2025', label: 'Spring 2025', icon: '🌸' }
+  ];
+
   // Filter matches based on date range
   $: {
     const now = new Date();
@@ -84,6 +92,23 @@
       case '2025-2026':
         startDate = new Date('2025-08-01');
         endDate = new Date('2026-05-31');
+        break;
+      // Seasonal periods
+      case 'summer-2024':
+        startDate = new Date('2024-06-01');
+        endDate = new Date('2024-08-31');
+        break;
+      case 'autumn-2024':
+        startDate = new Date('2024-09-01');
+        endDate = new Date('2024-11-30');
+        break;
+      case 'winter-2025':
+        startDate = new Date('2024-12-01');
+        endDate = new Date('2025-02-28');
+        break;
+      case 'spring-2025':
+        startDate = new Date('2025-03-01');
+        endDate = new Date('2025-05-31');
         break;
       default:
         startDate = subDays(now, 30);
@@ -331,21 +356,44 @@
 
 <div class="space-y-6">
   <!-- Date Range Selector -->
-  <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
-    <Calendar class="w-5 h-5 text-green-500" />
-    <div class="flex flex-wrap gap-2">
-      {#each dateRanges as range}
-        <button
-          on:click={() => selectedDateRange = range.value}
-          class="px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
-            selectedDateRange === range.value
-              ? 'bg-green-500 text-black shadow-lg shadow-green-500/30'
-              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
-          }"
-        >
-          {range.label}
-        </button>
-      {/each}
+  <div class="space-y-4">
+    <!-- Standard Date Ranges -->
+    <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
+      <Calendar class="w-5 h-5 text-green-500" />
+      <div class="flex flex-wrap gap-2">
+        {#each dateRanges as range}
+          <button
+            on:click={() => selectedDateRange = range.value}
+            class="px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
+              selectedDateRange === range.value
+                ? 'bg-green-500 text-black shadow-lg shadow-green-500/30'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+            }"
+          >
+            {range.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+
+    <!-- Seasonal Periods -->
+    <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
+      <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">2024-25 Seasons:</span>
+      <div class="flex flex-wrap gap-2">
+        {#each seasonalPeriods as period}
+          <button
+            on:click={() => selectedDateRange = period.value}
+            class="flex items-center gap-2 px-3 py-1.5 text-sm font-mono rounded-lg transition-all {
+              selectedDateRange === period.value
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
+                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
+            }"
+          >
+            <span>{period.icon}</span>
+            <span>{period.label}</span>
+          </button>
+        {/each}
+      </div>
     </div>
   </div>
 

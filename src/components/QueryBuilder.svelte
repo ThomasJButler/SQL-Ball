@@ -1,15 +1,25 @@
 <script lang="ts">
-  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check } from 'lucide-svelte';
+  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check, Key } from 'lucide-svelte';
   import { onMount } from 'svelte';
-  import { ragService, type QueryResponse } from '../services/ragService';
+  import { createEventDispatcher } from 'svelte';
   import { supabase } from '../lib/supabase';
+
+  const dispatch = createEventDispatcher();
+
+  interface QueryResponse {
+    sql: string;
+    explanation?: string;
+    confidence?: number;
+    optimizationSuggestions?: string[];
+    performanceEstimate?: string;
+  }
 
   let naturalQuery = '';
   let isLoading = false;
   let queryResult: QueryResponse | null = null;
   let executionResult: any[] = [];
   let error: string | null = null;
-  let backendHealthy = false;
+  let hasApiKey = false;
   let showExamples = false;
   let selectedSeason = '2024-2025';
   let showOptimizations = false;
@@ -28,26 +38,23 @@
     "Find players from Manchester clubs"
   ];
 
-  onMount(async () => {
-    // Check backend health
-    try {
-      backendHealthy = await ragService.checkHealth();
-      if (backendHealthy) {
-        console.log('✅ SQL-Ball RAG backend connected');
-        // Load example queries
-        const examples = await ragService.getExamples();
-        console.log('Loaded examples:', examples);
-      } else {
-        error = 'Backend not ready. Please ensure the FastAPI server is running on port 8000.';
-      }
-    } catch (err) {
-      console.error('Failed to connect to backend:', err);
-      error = 'Cannot connect to backend. Run: cd backend && uvicorn main:app --reload';
-    }
+  onMount(() => {
+    // Check if OpenAI API key is configured
+    const apiKey = localStorage.getItem('openai_api_key');
+    hasApiKey = !!apiKey;
   });
 
+  function navigateToSettings() {
+    dispatch('navigate', { view: 'Settings' });
+  }
+
   async function handleSubmit() {
-    if (!naturalQuery.trim() || !backendHealthy) return;
+    if (!naturalQuery.trim()) return;
+
+    if (!hasApiKey) {
+      error = 'Please add your OpenAI API key in Settings to use the Query Builder.';
+      return;
+    }
 
     isLoading = true;
     error = null;
@@ -56,39 +63,69 @@
     showOptimizations = false;
 
     try {
-      // Get OpenAI API key from localStorage
       const apiKey = localStorage.getItem('openai_api_key');
-
       if (!apiKey) {
-        error = 'OpenAI API key not found. Please set it up in Settings or refresh the page.';
-        return;
+        throw new Error('OpenAI API key not found');
       }
 
-      // Process query through RAG backend
-      const response = await ragService.processQuery({
-        question: naturalQuery,
-        season: selectedSeason,
-        include_explanation: true,
-        limit: 20,
-        api_key: apiKey  // Send API key with request
+      // Make direct call to OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4-turbo-preview',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an SQL expert for SQL-Ball, a football analytics platform. Convert natural language queries to PostgreSQL queries.
+
+Database Schema:
+- seasons table: id, name (e.g., '2024-25', '2025-26')
+- matches table: id, season_id, date, home_team, away_team, home_score, away_score, home_xg, away_xg, home_shots, away_shots, result (H/A/D)
+- player_stats table: id, season_id, player_name, team, position, goals, assists, xg, xa, minutes_played, appearances
+
+Rules:
+1. Return ONLY the SQL query, no explanations or markdown
+2. Use appropriate JOINs when needed
+3. Always limit results to prevent huge queries (default LIMIT 20)
+4. For current season, use season_id = '${selectedSeason}'
+5. Use proper PostgreSQL syntax
+6. For team names, use ILIKE for case-insensitive matching
+7. Format dates properly for PostgreSQL
+
+Example:
+Input: "Show me Liverpool's recent matches"
+Output: SELECT date, home_team, away_team, home_score, away_score FROM matches WHERE (home_team ILIKE '%Liverpool%' OR away_team ILIKE '%Liverpool%') ORDER BY date DESC LIMIT 10`
+            },
+            { role: 'user', content: naturalQuery }
+          ],
+          temperature: 0.2,
+          max_tokens: 500
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate SQL');
+      }
+
+      const data = await response.json();
+      const generatedSQL = data.choices[0].message.content;
 
       // Store the response
       queryResult = {
-        sql: response.sql,
-        explanation: response.explanation || 'Query processed successfully',
-        confidence: 0.95, // Default confidence
-        optimizationSuggestions: response.optimizations || [],
-        performanceEstimate: response.execution_time_ms ? `${response.execution_time_ms}ms` : 'Fast'
+        sql: generatedSQL.trim(),
+        explanation: 'Query generated successfully',
+        confidence: 0.95,
+        optimizationSuggestions: [],
+        performanceEstimate: 'Fast'
       };
 
-      // Backend returns mock results for now
-      // We'll execute the SQL ourselves
-      if (response.results && Array.isArray(response.results) && response.results[0]?.message) {
-        // This is just the backend's mock response
-        // Execute the query ourselves
-        await executeSQL();
-      }
+      // Auto-execute the query
+      await executeSQL();
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
       console.error('Query error:', err);
@@ -245,6 +282,30 @@
       Convert natural language to SQL queries instantly
     </p>
   </div>
+
+  <!-- API Key Check -->
+  {#if !hasApiKey}
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <Key class="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <div>
+            <h3 class="font-semibold text-slate-900 dark:text-white">OpenAI API Key Required</h3>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              Add your OpenAI API key in Settings to enable natural language to SQL conversion
+            </p>
+          </div>
+        </div>
+        <button
+          on:click={navigateToSettings}
+          class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+        >
+          <Key class="w-4 h-4" />
+          Add API Key
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <!-- Query Input -->
   <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6 mb-6 border border-slate-200 dark:border-slate-800">
