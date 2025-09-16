@@ -28,14 +28,7 @@
   let isExecuting = false;
   let useBackendAPI = true;
   let backendAvailable = false;
-  let autoExecute = false;
-
-
-  // Save auto-execute preference
-  function toggleAutoExecute() {
-    autoExecute = !autoExecute;
-    localStorage.setItem('autoExecuteQueries', autoExecute.toString());
-  }
+  // Removed auto-execute functionality for deployment simplicity
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
@@ -64,8 +57,7 @@
       useBackendAPI = true;
     }
 
-    // Load auto-execute preference from localStorage
-    autoExecute = localStorage.getItem('autoExecuteQueries') === 'true';
+    // Auto-execute functionality removed
   });
 
   function navigateToSettings() {
@@ -117,10 +109,7 @@
         // If backend already executed the query
         if (response.results) {
           executionResult = response.results;
-        } else if (autoExecute) {
-          // Auto-execute the query if toggle is enabled
-          await executeSQL();
-        }
+        // Auto-execute removed - user must click Execute button
       } else {
         // Fallback to direct OpenAI API call
         const apiKey = localStorage.getItem('openai_api_key');
@@ -187,10 +176,7 @@ Output: SELECT match_date, home_team, away_team, home_score, away_score FROM mat
           performanceEstimate: 'Fast'
         };
 
-        // Auto-execute the query if toggle is enabled
-        if (autoExecute) {
-          await executeSQL();
-        }
+        // Auto-execute removed - user must click Execute button
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
@@ -413,21 +399,7 @@ Output: SELECT match_date, home_team, away_team, home_score, away_score FROM mat
           {/if}
         </button>
 
-        <!-- Auto-execute toggle -->
-        <div class="flex items-center gap-2">
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              bind:checked={autoExecute}
-              on:change={toggleAutoExecute}
-              class="sr-only peer"
-            />
-            <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-slate-700 peer-checked:bg-green-600 transition-colors">
-              <div class="absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform {autoExecute ? 'translate-x-full' : 'translate-x-0'} dark:border-gray-600"></div>
-            </div>
-          </label>
-          <span class="text-sm text-slate-600 dark:text-slate-400">Auto-execute</span>
-        </div>
+        <!-- Auto-execute toggle removed for deployment simplicity -->
 
         <button
           type="button"

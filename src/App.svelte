@@ -89,12 +89,12 @@
           <Dashboard bind:this={dashboardComponent} />
         {:else if currentView === 'Query Builder'}
           <QueryBuilder on:navigate={navigate} />
-        {:else if currentView === 'Pattern Discovery'}
-          <PatternDiscovery />
+        <!-- {:else if currentView === 'Pattern Discovery'}
+          <PatternDiscovery /> -->
         {:else if currentView === 'AI Assistant'}
           <AiAssistant on:navigate={navigate} />
-        {:else if currentView === 'Season Stats'}
-          <SeasonStats />
+        <!-- {:else if currentView === 'Season Stats'}
+          <SeasonStats /> -->
         {:else if currentView === 'Settings'}
           <Settings />
         {:else if currentView === 'Help'}

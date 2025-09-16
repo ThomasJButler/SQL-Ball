@@ -88,9 +88,9 @@
         startDate = new Date('2024-08-01');
         endDate = new Date('2025-05-31');
         break;
-      // Seasonal periods
+      // Seasonal periods (adjusted for actual data availability)
       case 'summer-2024':
-        startDate = new Date('2024-06-01');
+        startDate = new Date('2024-07-01');
         endDate = new Date('2024-08-31');
         break;
       case 'autumn-2024':
