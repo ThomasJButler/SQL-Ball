@@ -7,7 +7,7 @@ from langchain.chains import create_sql_query_chain
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.schema import BaseMessage
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 import os
 import time
 from supabase import create_client, Client
@@ -18,12 +18,17 @@ class SQLChain:
         self.schema_embedder = schema_embedder
         self.football_mapper = football_mapper
         self.default_api_key = os.getenv("VITE_OPENAI_API_KEY")  # Fallback API key
+        self.llm: Optional[ChatOpenAI] = None  # Will be initialized when API key is available
 
         # Initialize Supabase
-        self.supabase: Client = create_client(
-            os.getenv("VITE_SUPABASE_URL"),
-            os.getenv("VITE_SUPABASE_ANON_KEY")
-        )
+        supabase_url = os.getenv("VITE_SUPABASE_URL")
+        supabase_key = os.getenv("VITE_SUPABASE_ANON_KEY")
+        
+        if supabase_url and supabase_key:
+            self.supabase: Optional[Client] = create_client(supabase_url, supabase_key)
+        else:
+            self.supabase: Optional[Client] = None
+            print("Warning: Supabase configuration missing")
 
         # Create prompt template
         self.prompt = ChatPromptTemplate.from_messages([
@@ -133,14 +138,65 @@ class SQLChain:
     async def _generate_sql(self, **kwargs) -> str:
         """Generate SQL query using LangChain"""
         try:
+            if not self.llm:
+                raise ValueError("LLM not initialized")
             response = await self.llm.ainvoke(
                 self.prompt.format_messages(**kwargs)
             )
-            return response.content
+            # Ensure we return a string
+            content = response.content
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
         except Exception as e:
             print(f"Error generating SQL: {e}")
-            # Fallback to simple query
-            return f"SELECT * FROM matches WHERE season = '{kwargs.get('season', '2024-2025')}' LIMIT 10"
+            # Use pattern-based fallback for common questions
+            return self._generate_fallback_sql(kwargs.get('question', ''), kwargs.get('season', '2024-2025'))
+
+    def _generate_fallback_sql(self, question: str, season: str) -> str:
+        """Generate SQL using pattern matching when OpenAI is unavailable"""
+        question_lower = question.lower()
+
+        # Common query patterns
+        if "home record" in question_lower or "best home" in question_lower:
+            return f"""SELECT home_team,
+                COUNT(*) as total_games,
+                SUM(CASE WHEN home_score > away_score THEN 1 ELSE 0 END) as wins,
+                SUM(CASE WHEN home_score = away_score THEN 1 ELSE 0 END) as draws,
+                SUM(CASE WHEN home_score < away_score THEN 1 ELSE 0 END) as losses
+                FROM matches
+                WHERE season = '{season}' AND finished = 1
+                GROUP BY home_team
+                ORDER BY wins DESC LIMIT 10"""
+
+        elif "top scorer" in question_lower or "most goals" in question_lower:
+            return f"""SELECT web_name, SUM(goals_scored) as total_goals
+                FROM players p
+                JOIN player_stats ps ON p.player_id = ps.player_id
+                WHERE p.season = '{season}'
+                GROUP BY p.player_id, web_name
+                ORDER BY total_goals DESC LIMIT 10"""
+
+        elif "clean sheet" in question_lower:
+            return f"""SELECT web_name, COUNT(*) as clean_sheets
+                FROM players p
+                JOIN player_stats ps ON p.player_id = ps.player_id
+                WHERE p.season = '{season}' AND position = 'GK' AND ps.goals_conceded = 0
+                GROUP BY p.player_id, web_name
+                ORDER BY clean_sheets DESC LIMIT 10"""
+
+        elif "assist" in question_lower:
+            return f"""SELECT web_name, SUM(assists) as total_assists
+                FROM players p
+                JOIN player_stats ps ON p.player_id = ps.player_id
+                WHERE p.season = '{season}'
+                GROUP BY p.player_id, web_name
+                ORDER BY total_assists DESC LIMIT 10"""
+
+        else:
+            # Generic fallback
+            return f"SELECT * FROM matches WHERE season = '{season}' AND finished = 1 ORDER BY gameweek DESC LIMIT 10"
 
     def _clean_sql(self, sql: str) -> str:
         """Clean and format SQL query"""
@@ -150,11 +206,33 @@ class SQLChain:
         # Remove extra whitespace
         sql = " ".join(sql.split())
 
+        # Check for truncated queries (common issue)
+        if sql.count("(") != sql.count(")"):
+            print(f"⚠️  WARNING: Unbalanced parentheses detected in SQL: {sql}")
+            # Try to fix by completing common patterns
+            if "SUM(CASE WHEN" in sql and not sql.endswith("END)"):
+                sql += " END)"
+
+        # Check for incomplete column references
+        if sql.endswith("_sco") and "away_score" in sql:
+            sql = sql.replace("away_sco", "away_score")
+
+        # Fix conflicting WHERE conditions
+        import re
+
+        # Look for impossible conditions like season = 'A' AND season = 'B'
+        season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
+        if len(season_matches) > 1 and len(set(season_matches)) > 1:
+            # Multiple different seasons found - keep only the first one
+            first_season = season_matches[0]
+            sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{first_season}'", sql, flags=re.IGNORECASE)
+            # Remove duplicate AND clauses
+            sql = re.sub(r"\bAND\s+season\s*=\s*['\"][^'\"]+['\"]", "", sql, flags=re.IGNORECASE)
+
         # Fix common SQL ordering issues
         # Check if WHERE is after GROUP BY (common GPT error)
         if "GROUP BY" in sql.upper() and "WHERE" in sql.upper():
             # Use case-insensitive search
-            import re
 
             # Find positions of clauses
             group_match = re.search(r'\bGROUP\s+BY\b', sql, re.IGNORECASE)
@@ -187,11 +265,47 @@ class SQLChain:
                     # Insert WHERE before GROUP BY
                     sql = sql[:group_match.start()].rstrip() + " " + where_clause + " " + sql[group_match.start():]
 
+        # Validate final query
+        if not self._validate_sql(sql):
+            print(f"⚠️  WARNING: Generated SQL may have issues: {sql}")
+
         # Ensure semicolon at end
         if not sql.strip().endswith(";"):
             sql = sql.strip() + ";"
 
         return sql
+
+    def _validate_sql(self, sql: str) -> bool:
+        """Basic SQL validation"""
+        try:
+            import re
+            sql_upper = sql.upper()
+
+            # Check for basic requirements
+            if not sql_upper.strip().startswith("SELECT"):
+                return False
+
+            # Check for balanced parentheses
+            if sql.count("(") != sql.count(")"):
+                return False
+
+            # Check for incomplete expressions
+            incomplete_patterns = [
+                r'\w+_$',  # Ends with underscore
+                r'\w+_\s+(FROM|WHERE|GROUP|ORDER)',  # Truncated column names
+                r'=\s*$',  # Hanging equals
+                r'AND\s*$',  # Hanging AND
+            ]
+
+            for pattern in incomplete_patterns:
+                if re.search(pattern, sql, re.IGNORECASE):
+                    return False
+
+            return True
+
+        except Exception as e:
+            print(f"SQL validation error: {e}")
+            return False
 
     def _add_season_filter(self, sql: str, season: str) -> str:
         """Add season filter to SQL if not present"""
@@ -259,8 +373,14 @@ class SQLChain:
         """
 
         try:
+            if not self.llm:
+                return "This query searches the football database based on your question."
             response = await self.llm.ainvoke(explanation_prompt)
-            return response.content
+            content = response.content
+            if isinstance(content, str):
+                return content
+            else:
+                return str(content)
         except:
             return "This query searches the football database based on your question."
 
@@ -280,14 +400,26 @@ class SQLChain:
         """
 
         try:
+            if not self.llm:
+                return {
+                    "original_sql": sql,
+                    "optimized_sql": sql,
+                    "explanation": "Optimization requires LLM initialization",
+                    "suggestions": optimizations
+                }
+                
             response = await self.llm.ainvoke(optimize_prompt)
+            content = response.content
 
             # Parse response to extract optimized SQL
             optimized_sql = sql  # Fallback to original
+            
+            # Convert content to string if needed
+            content_str = str(content) if not isinstance(content, str) else content
 
             # Simple extraction (in production, use better parsing)
-            if "SELECT" in response.content:
-                lines = response.content.split("\n")
+            if "SELECT" in content_str:
+                lines = content_str.split("\n")
                 sql_lines = []
                 in_sql = False
 
@@ -305,7 +437,7 @@ class SQLChain:
             return {
                 "original_sql": sql,
                 "optimized_sql": self._clean_sql(optimized_sql),
-                "explanation": response.content,
+                "explanation": content_str,
                 "suggestions": optimizations
             }
 
