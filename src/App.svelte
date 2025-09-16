@@ -50,11 +50,16 @@
       isSidebarOpen = true;
     }
 
-    // Skip OpenAI setup - backend handles it now
-    hasOpenAIKey = true;
-    showOpenAISetup = false;
+    // Check for OpenAI API key in localStorage
+    const openAIKey = localStorage.getItem('openai_api_key');
+    hasOpenAIKey = !!openAIKey;
 
-    // Check for Football-Data API key
+    // Show setup wizard if no OpenAI key found
+    if (!hasOpenAIKey) {
+      showOpenAISetup = true;
+    }
+
+    // Check for Football-Data API key (deprecated but kept for compatibility)
     checkApiKey();
   });
 

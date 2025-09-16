@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu } from 'lucide-svelte';
+  import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { ragService, type QueryResponse } from '../services/ragService';
   import { supabase } from '../lib/supabase';
@@ -13,6 +13,8 @@
   let showExamples = false;
   let selectedSeason = '2024-2025';
   let showOptimizations = false;
+  let copySuccess = false;
+  let isExecuting = false;
 
   // Natural language examples for the AI-powered query system
   const exampleQueries = [
@@ -54,12 +56,21 @@
     showOptimizations = false;
 
     try {
+      // Get OpenAI API key from localStorage
+      const apiKey = localStorage.getItem('openai_api_key');
+
+      if (!apiKey) {
+        error = 'OpenAI API key not found. Please set it up in Settings or refresh the page.';
+        return;
+      }
+
       // Process query through RAG backend
       const response = await ragService.processQuery({
         question: naturalQuery,
         season: selectedSeason,
         include_explanation: true,
-        limit: 20
+        limit: 20,
+        api_key: apiKey  // Send API key with request
       });
 
       // Store the response
@@ -71,92 +82,12 @@
         performanceEstimate: response.execution_time_ms ? `${response.execution_time_ms}ms` : 'Fast'
       };
 
-      // If backend returns results directly, use them
-      if (response.results && Array.isArray(response.results)) {
-        executionResult = response.results;
-        return; // Skip local execution
-      }
-
-      // Otherwise parse and execute SQL locally
-      const sqlLower = queryResult.sql.toLowerCase().trim();
-      
-      if (!sqlLower.startsWith('select')) {
-        throw new Error('Only SELECT queries are supported in demo mode');
-      }
-      
-      // Extract table name
-      const tableMatch = sqlLower.match(/from\s+(\w+)/);
-      if (!tableMatch) {
-        throw new Error('Could not identify table in query');
-      }
-      
-      const tableName = tableMatch[1];
-      
-      // Build Supabase query based on SQL
-      let query: any;
-
-      // Extract columns (if not SELECT *)
-      const selectMatch = queryResult.sql.match(/select\s+(.*?)\s+from/i);
-      if (selectMatch && selectMatch[1].trim() !== '*') {
-        const columns = selectMatch[1].split(',').map(c => c.trim());
-        query = supabase.from(tableName).select(columns.join(','));
-      } else {
-        query = supabase.from(tableName).select('*');
-      }
-      
-      // Handle WHERE clause
-      const whereMatch = sqlLower.match(/where\s+(.*?)(?:\s+order\s+by|\s+limit|$)/);
-      if (whereMatch) {
-        const whereClause = whereMatch[1];
-        
-        // Parse simple WHERE conditions (column operator value)
-        const conditionMatch = whereClause.match(/(\w+)\s*(=|>|<|>=|<=|!=)\s*(.+)/);
-        if (conditionMatch) {
-          const [, column, operator, value] = conditionMatch;
-          const cleanValue = value.replace(/['"`]/g, '').trim();
-          
-          // Map SQL operators to Supabase filters
-          if (operator === '=') {
-            query = query.eq(column, isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue));
-          } else if (operator === '>') {
-            query = query.gt(column, Number(cleanValue));
-          } else if (operator === '<') {
-            query = query.lt(column, Number(cleanValue));
-          } else if (operator === '>=') {
-            query = query.gte(column, Number(cleanValue));
-          } else if (operator === '<=') {
-            query = query.lte(column, Number(cleanValue));
-          } else if (operator === '!=') {
-            query = query.neq(column, isNaN(Number(cleanValue)) ? cleanValue : Number(cleanValue));
-          }
-        }
-      }
-      
-      // Handle ORDER BY
-      const orderMatch = sqlLower.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
-      if (orderMatch) {
-        const [, orderColumn, direction] = orderMatch;
-        query = query.order(orderColumn, { ascending: direction !== 'desc' });
-      }
-      
-      // Handle LIMIT
-      const limitMatch = sqlLower.match(/limit\s+(\d+)/);
-      if (limitMatch) {
-        query = query.limit(parseInt(limitMatch[1]));
-      } else {
-        // Default limit for safety
-        query = query.limit(100);
-      }
-      
-      // Execute query
-      const { data, error: execError } = await query;
-      
-      if (execError) throw execError;
-      executionResult = data || [];
-      
-      // Add info about results
-      if (executionResult.length === 0) {
-        error = 'Query executed successfully but returned no results';
+      // Backend returns mock results for now
+      // We'll execute the SQL ourselves
+      if (response.results && Array.isArray(response.results) && response.results[0]?.message) {
+        // This is just the backend's mock response
+        // Execute the query ourselves
+        await executeSQL();
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'An error occurred';
@@ -183,6 +114,114 @@
       .replace(/ORDER BY/gi, '\nORDER BY')
       .replace(/LIMIT/gi, '\nLIMIT');
   }
+
+  async function copyToClipboard() {
+    if (!queryResult?.sql) return;
+
+    try {
+      await navigator.clipboard.writeText(queryResult.sql);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = queryResult.sql;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      copySuccess = true;
+      setTimeout(() => copySuccess = false, 2000);
+    }
+  }
+
+  async function executeSQL() {
+    if (!queryResult?.sql) return;
+
+    isExecuting = true;
+    error = null;
+    executionResult = [];
+
+    try {
+      // Parse the SQL to extract the query structure
+      const sql = queryResult.sql;
+
+      // For now, use Supabase RPC for complex queries
+      // In production, you'd want a proper SQL executor
+      const { data, error: execError } = await supabase
+        .rpc('execute_sql', { query_text: sql })
+        .single();
+
+      if (execError) {
+        // Fallback to simple parsing for basic queries
+        await executeSimpleQuery(sql);
+      } else {
+        executionResult = data.result || [];
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Failed to execute query';
+    } finally {
+      isExecuting = false;
+    }
+  }
+
+  async function executeSimpleQuery(sql: string) {
+    // Simple query execution for basic SELECT statements
+    const cleanSql = sql.toLowerCase().trim();
+
+    // Extract table name
+    const fromMatch = cleanSql.match(/from\s+(\w+)/);
+    if (!fromMatch) throw new Error('Could not identify table');
+
+    const table = fromMatch[1];
+    let query = supabase.from(table);
+
+    // Handle SELECT columns
+    const selectMatch = sql.match(/select\s+(.*?)\s+from/i);
+    if (selectMatch && selectMatch[1].trim() !== '*') {
+      // For aggregates, we need different handling
+      if (selectMatch[1].includes('sum(') || selectMatch[1].includes('count(')) {
+        // This needs server-side execution
+        throw new Error('Aggregate functions require server-side execution. Please run this query in Supabase SQL Editor.');
+      }
+      const columns = selectMatch[1].split(',').map(c => c.trim());
+      query = query.select(columns.join(','));
+    } else {
+      query = query.select('*');
+    }
+
+    // Handle WHERE conditions
+    const whereMatch = cleanSql.match(/where\s+(.*?)(?:\s+group\s+by|\s+order\s+by|\s+limit|$)/);
+    if (whereMatch) {
+      const conditions = whereMatch[1];
+      // Parse simple conditions
+      const condParts = conditions.match(/(\w+)\s*=\s*['"]?([^'"]+)['"]?/g);
+      if (condParts) {
+        for (const cond of condParts) {
+          const [col, val] = cond.split('=').map(s => s.trim().replace(/['"]/g, ''));
+          query = query.eq(col, val);
+        }
+      }
+    }
+
+    // Handle ORDER BY
+    const orderMatch = cleanSql.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/);
+    if (orderMatch) {
+      query = query.order(orderMatch[1], { ascending: orderMatch[2] !== 'desc' });
+    }
+
+    // Handle LIMIT
+    const limitMatch = cleanSql.match(/limit\s+(\d+)/);
+    if (limitMatch) {
+      query = query.limit(parseInt(limitMatch[1]));
+    } else {
+      query = query.limit(100);
+    }
+
+    const { data, error: execError } = await query;
+    if (execError) throw execError;
+    executionResult = data || [];
+  }
 </script>
 
 <div class="max-w-7xl mx-auto">
@@ -205,11 +244,11 @@
     
     <form on:submit|preventDefault={handleSubmit} class="space-y-4">
       <div class="relative">
-        <input
-          type="text"
+        <textarea
           bind:value={naturalQuery}
-          placeholder="Enter SQL query (e.g., SELECT * FROM matches LIMIT 10)"
-          class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder-slate-500"
+          placeholder="Enter your question in plain English (e.g., 'Show me Liverpool's total goals for 2025')"
+          class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-slate-900 dark:text-white placeholder-slate-500 resize-none"
+          rows="3"
           disabled={isLoading}
         />
         {#if naturalQuery}
@@ -285,17 +324,49 @@
             <Database class="w-5 h-5 text-emerald-500" />
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Generated SQL</h2>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-slate-500">Confidence:</span>
-            <span class="text-sm font-medium text-green-600 dark:text-green-400">
-              {Math.round(queryResult.confidence * 100)}%
-            </span>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">Confidence:</span>
+              <span class="text-sm font-medium text-green-600 dark:text-green-400">
+                {Math.round(queryResult.confidence * 100)}%
+              </span>
+            </div>
+            <button
+              on:click={copyToClipboard}
+              class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2 text-sm"
+              title="Copy SQL to clipboard"
+            >
+              {#if copySuccess}
+                <Check class="w-4 h-4 text-green-500" />
+                <span class="text-green-600 dark:text-green-400">Copied!</span>
+              {:else}
+                <Copy class="w-4 h-4" />
+                <span>Copy SQL</span>
+              {/if}
+            </button>
           </div>
         </div>
-        
-        <pre class="bg-slate-900 text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm">
+
+        <pre class="bg-slate-900 text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm mb-4">
 {formatSQL(queryResult.sql)}
         </pre>
+
+        <!-- Execute Button -->
+        <div class="flex justify-end">
+          <button
+            on:click={executeSQL}
+            disabled={isExecuting}
+            class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium rounded-lg hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+          >
+            {#if isExecuting}
+              <span class="animate-spin">⏳</span>
+              Executing...
+            {:else}
+              <PlayCircle class="w-4 h-4" />
+              Execute Query
+            {/if}
+          </button>
+        </div>
 
         <!-- Explanation -->
         <div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

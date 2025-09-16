@@ -10,6 +10,7 @@ export interface QueryRequest {
   season?: string;
   include_explanation?: boolean;
   limit?: number;
+  api_key?: string;  // OpenAI API key from localStorage
 }
 
 export interface QueryResponse {

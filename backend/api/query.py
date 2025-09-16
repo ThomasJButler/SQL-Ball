@@ -14,6 +14,7 @@ class QueryRequest(BaseModel):
     season: Optional[str] = "2024-2025"
     include_explanation: bool = True
     limit: Optional[int] = 10
+    api_key: Optional[str] = None  # OpenAI API key from frontend
 
 class QueryResponse(BaseModel):
     sql: str
@@ -52,10 +53,12 @@ async def process_natural_language_query(request: QueryRequest):
         raise HTTPException(status_code=503, detail="Query system not initialized")
 
     try:
+        # Pass API key to the chain if provided
         result = await sql_chain.process_query(
             question=request.question,
             season=request.season,
-            include_explanation=request.include_explanation
+            include_explanation=request.include_explanation,
+            api_key=request.api_key  # Pass API key from frontend
         )
 
         return QueryResponse(**result)

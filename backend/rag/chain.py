@@ -17,13 +17,7 @@ class SQLChain:
     def __init__(self, schema_embedder, football_mapper):
         self.schema_embedder = schema_embedder
         self.football_mapper = football_mapper
-
-        # Initialize OpenAI
-        self.llm = ChatOpenAI(
-            model="gpt-4",
-            temperature=0,
-            api_key=os.getenv("VITE_OPENAI_API_KEY")
-        )
+        self.default_api_key = os.getenv("VITE_OPENAI_API_KEY")  # Fallback API key
 
         # Initialize Supabase
         self.supabase: Client = create_client(
@@ -69,12 +63,25 @@ class SQLChain:
         self,
         question: str,
         season: str = "2024-2025",
-        include_explanation: bool = True
+        include_explanation: bool = True,
+        api_key: str = None
     ) -> Dict[str, Any]:
         """
         Process natural language query and return SQL with results
         """
         start_time = time.time()
+
+        # Use provided API key or fallback to environment
+        current_api_key = api_key or self.default_api_key
+        if not current_api_key:
+            raise ValueError("OpenAI API key is required. Please provide it in the request or set VITE_OPENAI_API_KEY environment variable.")
+
+        # Create LLM instance with the appropriate API key
+        self.llm = ChatOpenAI(
+            model="gpt-4",
+            temperature=0,
+            api_key=current_api_key
+        )
 
         # Map football terms
         modified_query, mappings = self.football_mapper.map_query(question)
