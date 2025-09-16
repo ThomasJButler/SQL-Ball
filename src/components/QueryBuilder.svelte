@@ -143,23 +143,34 @@
     executionResult = [];
 
     try {
-      // Parse the SQL to extract the query structure
-      const sql = queryResult.sql;
+      // Clean the SQL - remove trailing semicolon for Supabase
+      const sql = queryResult.sql.replace(/;\s*$/, '');
 
-      // For now, use Supabase RPC for complex queries
-      // In production, you'd want a proper SQL executor
+      // Use Supabase RPC to execute the SQL
       const { data, error: execError } = await supabase
-        .rpc('execute_sql', { query_text: sql })
-        .single();
+        .rpc('execute_sql', { query_text: sql });
 
       if (execError) {
-        // Fallback to simple parsing for basic queries
-        await executeSimpleQuery(sql);
-      } else {
-        executionResult = data.result || [];
+        error = `Query execution failed: ${execError.message}`;
+        console.error('Execution error:', execError);
+        return;
+      }
+
+      // Check if the result contains an error
+      if (data && data.error) {
+        error = `SQL Error: ${data.message}`;
+        return;
+      }
+
+      // Parse the results
+      executionResult = data || [];
+
+      if (executionResult.length === 0) {
+        error = 'Query executed successfully but returned no results';
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to execute query';
+      console.error('Execution error:', err);
     } finally {
       isExecuting = false;
     }
