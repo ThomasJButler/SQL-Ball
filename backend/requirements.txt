@@ -11,3 +11,4 @@ numpy==1.26.2
 python-multipart==0.0.6
 requests==2.31.0
 aiofiles==24.1.0
+supabase==2.18.1
