@@ -62,6 +62,16 @@ class SQLChain:
             10. CRITICAL: Use only ONE season per query - do NOT use multiple season conditions like 'season = A AND season = B'
             11. If no specific season mentioned in question, use the season parameter provided in the request
 
+            EXAMPLES OF CORRECT vs INCORRECT SQL:
+            ❌ WRONG: WHERE season = '2024-2025' AND season = '2025-2026'
+            ✅ CORRECT: WHERE season = '2024-2025'
+
+            ❌ WRONG: Multiple seasons in same query
+            ✅ CORRECT: Pick ONE season only
+
+            The season parameter provided in this request is: {season}
+            ALWAYS use this exact season value unless explicitly told otherwise.
+
             Generate only the SQL query, no explanations."""),
             ("user", "{question}")
         ])

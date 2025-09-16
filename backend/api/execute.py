@@ -46,12 +46,24 @@ async def execute_sql_query(request: ExecuteRequest):
         # Fix PostgreSQL quote issues - convert double quotes around string literals to single quotes
         # This is a simple fix for common cases where values are wrapped in double quotes
         import re
-        
+
         # Pattern to match = "value" and convert to = 'value'
         clean_sql = re.sub(r'=\s*"([^"]*)"', r"= '\1'", clean_sql)
         # Pattern to match IN ("value1", "value2") and convert to IN ('value1', 'value2')
         clean_sql = re.sub(r'IN\s*\(\s*"([^"]*)"', r"IN ('\1'", clean_sql)
         clean_sql = re.sub(r'",\s*"([^"]*)"', r"', '\1'", clean_sql)
+
+        # AGGRESSIVE FIX: Detect and fix conflicting season conditions
+        season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", clean_sql, re.IGNORECASE)
+        if len(season_matches) > 1 and len(set(season_matches)) > 1:
+            print(f"🚨 EXECUTE: Found conflicting seasons: {season_matches}")
+            # Keep only the first season condition
+            first_season = season_matches[0]
+            clean_sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{first_season}'", clean_sql, flags=re.IGNORECASE)
+            # Clean up multiple ANDs
+            clean_sql = re.sub(r"\bAND\s+season\s*=\s*['\"][^'\"]+['\"]", "", clean_sql, flags=re.IGNORECASE)
+            clean_sql = re.sub(r"\bAND\s+AND\b", "AND", clean_sql, flags=re.IGNORECASE)
+            print(f"🔧 EXECUTE: Fixed to use only '{first_season}': {clean_sql}")
         
         print(f"🔍 DEBUG: Fixed SQL query: {clean_sql}")
         
