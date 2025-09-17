@@ -5,9 +5,7 @@
   import Footer from './components/Footer.svelte';
   import Dashboard from './components/Dashboard.svelte';
   import QueryBuilder from './components/QueryBuilder.svelte';
-  import PatternDiscovery from './components/PatternDiscovery.svelte';
   import AiAssistant from './components/AiAssistant.svelte';
-  import SeasonStats from './components/SeasonStats.svelte';
   import Settings from './components/Settings.svelte';
   import OpenAISetupWizard from './components/OpenAISetupWizard.svelte';
   import Help from './components/Help.svelte';
@@ -37,10 +35,8 @@
   }
 
   onMount(() => {
-    // Open sidebar only on large desktop screens
-    if (window.innerWidth >= 1024) { // Large desktop screens
-      isSidebarOpen = true;
-    }
+    // Keep sidebar closed by default for cleaner initial view
+    // User can open it manually if needed
 
     // Check for OpenAI API key in localStorage
     const openAIKey = localStorage.getItem('openai_api_key');
@@ -77,7 +73,7 @@
   <div class="flex-1 flex flex-col overflow-hidden">
     <Header toggleSidebar={toggleSidebar} />
 
-    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-white dark:bg-slate-950 p-4 sm:p-6 lg:p-8 relative">
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-white dark:bg-slate-950 p-4 sm:p-6 lg:p-8 pb-20 md:pb-4 relative">
       <!-- Page transition overlay -->
       {#if isTransitioning}
         <div class="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-50 transition-opacity duration-200 animate-fadeIn"></div>
@@ -89,12 +85,8 @@
           <Dashboard bind:this={dashboardComponent} />
         {:else if currentView === 'Query Builder'}
           <QueryBuilder on:navigate={navigate} />
-        <!-- {:else if currentView === 'Pattern Discovery'}
-          <PatternDiscovery /> -->
         {:else if currentView === 'AI Assistant'}
           <AiAssistant on:navigate={navigate} />
-        <!-- {:else if currentView === 'Season Stats'}
-          <SeasonStats /> -->
         {:else if currentView === 'Settings'}
           <Settings />
         {:else if currentView === 'Help'}

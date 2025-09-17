@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LayoutDashboard, Search, BarChart3, Trophy, HelpCircle } from 'lucide-svelte';
+  import { LayoutDashboard, Search, Settings, Bot, HelpCircle } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
 
   export let currentView: string;
@@ -9,8 +9,8 @@
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard, view: 'Dashboard' },
     { name: 'Query', icon: Search, view: 'Query Builder' },
-    { name: 'Stats', icon: BarChart3, view: 'Season Stats' },
-    { name: 'Scorers', icon: Trophy, view: 'Top Scorers' },
+    { name: 'Settings', icon: Settings, view: 'Settings' },
+    { name: 'AI Assistant', icon: Bot, view: 'AI Assistant' },
     { name: 'Help', icon: HelpCircle, view: 'Help' },
   ];
 

@@ -1,8 +1,13 @@
 <script lang="ts">
-  import { Send, Bot, Key, AlertCircle, Sparkles } from 'lucide-svelte';
+  import { Send, Bot, Key, AlertCircle, Sparkles, Copy, Check, RotateCcw, Maximize, Minimize } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { createEventDispatcher } from 'svelte';
+  import { marked } from 'marked';
+  import Prism from 'prismjs';
+  import 'prismjs/components/prism-sql';
+  import 'prismjs/components/prism-javascript';
+  import 'prismjs/components/prism-json';
 
   const dispatch = createEventDispatcher();
 
@@ -11,6 +16,8 @@
     text: string;
     sender: 'user' | 'assistant';
     timestamp: Date;
+    isMarkdown?: boolean;
+    copyButtonId?: string;
   }
 
   let messages: Message[] = [
@@ -30,9 +37,79 @@
   let hasApiKey = false;
   let errorMessage = '';
   let conversationHistory: { role: 'system' | 'user' | 'assistant', content: string }[] = [];
+  let isFullscreen = false;
+  let copiedMessageId: string | null = null;
+  let inputHeight = 48; // Initial height for textarea
+  let quickActions = [
+    "Explain this query",
+    "Show me the table structure",
+    "Find top scorers",
+    "Recent matches analysis"
+  ];
+  let showQuickActions = false;
 
   function navigateToSettings() {
     dispatch('navigate', { view: 'Settings' });
+  }
+
+  function toggleFullscreen() {
+    isFullscreen = !isFullscreen;
+  }
+
+  async function copyMessage(messageText: string, messageId: number) {
+    try {
+      await navigator.clipboard.writeText(messageText);
+      copiedMessageId = `copy-${messageId}`;
+      setTimeout(() => {
+        copiedMessageId = null;
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  }
+
+  function renderMarkdown(text: string): string {
+    // Configure marked for better rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+    });
+
+    let rendered = marked(text);
+
+    // Add syntax highlighting
+    const codeBlockRegex = /<pre><code class="language-(\w+)">([\s\S]*?)<\/code><\/pre>/g;
+    rendered = rendered.replace(codeBlockRegex, (match, lang, code) => {
+      try {
+        const highlighted = Prism.highlight(code, Prism.languages[lang] || Prism.languages.text, lang);
+        return `<pre class="code-block language-${lang}"><code>${highlighted}</code></pre>`;
+      } catch (e) {
+        return match;
+      }
+    });
+
+    return rendered;
+  }
+
+  function useQuickAction(action: string) {
+    inputMessage = action;
+    showQuickActions = false;
+    sendMessage();
+  }
+
+  function clearConversation() {
+    if (confirm('Are you sure you want to clear the conversation?')) {
+      messages = [messages[0]]; // Keep the initial welcome message
+      conversationHistory = [];
+    }
+  }
+
+  function autoResizeTextarea(event: Event) {
+    const textarea = event.target as HTMLTextAreaElement;
+    textarea.style.height = 'auto';
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 48), 120);
+    textarea.style.height = newHeight + 'px';
+    inputHeight = newHeight;
   }
 
   async function sendMessage() {
@@ -160,7 +237,8 @@ Always provide clean, optimized SQL queries that work with these field names and
         id: messages.length + 1,
         text: aiResponse,
         sender: 'assistant',
-        timestamp: new Date()
+        timestamp: new Date(),
+        isMarkdown: true
       };
       messages = [...messages, assistantMessage];
     } catch (error) {
@@ -205,7 +283,7 @@ Always provide clean, optimized SQL queries that work with these field names and
   });
 </script>
 
-<div class="ai-assistant flex flex-col h-full max-h-[calc(100vh-12rem)]">
+<div class="ai-assistant flex flex-col h-full {isFullscreen ? 'fixed inset-0 z-50 bg-white dark:bg-slate-950' : 'max-h-[calc(100vh-12rem)] md:max-h-[calc(100vh-8rem)]'}">
   <!-- Header -->
   <div class="bg-gradient-to-r from-primary/10 to-accent/10 dark:from-primary/20 dark:to-accent/20 rounded-t-xl p-4 border-b border-slate-200 dark:border-slate-700">
     <div class="flex items-center justify-between">
@@ -221,15 +299,38 @@ Always provide clean, optimized SQL queries that work with these field names and
         </div>
       </div>
 
-      {#if !hasApiKey}
-        <button
-          on:click={navigateToSettings}
-          class="btn btn-primary btn-sm flex items-center space-x-2"
-        >
-          <Key class="w-4 h-4" />
-          <span>Add API Key</span>
-        </button>
-      {/if}
+      <div class="flex items-center gap-2">
+        {#if hasApiKey}
+          <button
+            on:click={clearConversation}
+            class="btn btn-secondary btn-sm p-2 hover:bg-red-100 dark:hover:bg-red-900/20"
+            title="Clear conversation"
+          >
+            <RotateCcw class="w-4 h-4" />
+          </button>
+          <button
+            on:click={toggleFullscreen}
+            class="btn btn-secondary btn-sm p-2 md:hidden"
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          >
+            {#if isFullscreen}
+              <Minimize class="w-4 h-4" />
+            {:else}
+              <Maximize class="w-4 h-4" />
+            {/if}
+          </button>
+        {/if}
+
+        {#if !hasApiKey}
+          <button
+            on:click={navigateToSettings}
+            class="btn btn-primary btn-sm flex items-center space-x-2"
+          >
+            <Key class="w-4 h-4" />
+            <span class="hidden sm:inline">Add API Key</span>
+          </button>
+        {/if}
+      </div>
     </div>
   </div>
 
@@ -243,15 +344,36 @@ Always provide clean, optimized SQL queries that work with these field names and
         class="flex {message.sender === 'user' ? 'justify-end' : 'justify-start'}"
         transition:fly={{ y: 20, duration: 300 }}
       >
-        <div class="max-w-[80%] md:max-w-[60%]">
-          <div 
-            class="rounded-2xl px-4 py-3 {
-              message.sender === 'user' 
-                ? 'bg-gradient-to-r from-primary to-accent text-white' 
+        <div class="max-w-[85%] md:max-w-[75%] lg:max-w-[60%] group">
+          <div
+            class="relative rounded-2xl px-4 py-3 {
+              message.sender === 'user'
+                ? 'bg-gradient-to-r from-primary to-accent text-white'
                 : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
             }"
           >
-            <p class="text-sm whitespace-pre-wrap">{message.text}</p>
+            {#if message.sender === 'assistant' && message.isMarkdown}
+              <div class="prose prose-sm prose-slate dark:prose-invert max-w-none">
+                {@html renderMarkdown(message.text)}
+              </div>
+            {:else}
+              <p class="text-sm whitespace-pre-wrap leading-relaxed">{message.text}</p>
+            {/if}
+
+            <!-- Copy button for assistant messages -->
+            {#if message.sender === 'assistant'}
+              <button
+                on:click={() => copyMessage(message.text, message.id)}
+                class="absolute -top-2 -right-2 w-8 h-8 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity touch-target"
+                title="Copy message"
+              >
+                {#if copiedMessageId === `copy-${message.id}`}
+                  <Check class="w-3 h-3 text-green-600" />
+                {:else}
+                  <Copy class="w-3 h-3 text-slate-600 dark:text-slate-300" />
+                {/if}
+              </button>
+            {/if}
           </div>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 px-2 {
             message.sender === 'user' ? 'text-right' : 'text-left'
@@ -294,20 +416,55 @@ Always provide clean, optimized SQL queries that work with these field names and
     {/if}
   </div>
 
+  <!-- Quick Action Chips -->
+  {#if showQuickActions && hasApiKey}
+    <div class="border-t border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-900/50">
+      <div class="flex flex-wrap gap-2">
+        {#each quickActions as action}
+          <button
+            on:click={() => useQuickAction(action)}
+            class="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors touch-target"
+          >
+            {action}
+          </button>
+        {/each}
+      </div>
+    </div>
+  {/if}
+
   <!-- Input Area -->
-  <div class="border-t border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-900">
+  <div class="border-t border-slate-200 dark:border-slate-700 p-3 sm:p-4 bg-white dark:bg-slate-900 {isFullscreen ? 'pb-safe' : ''}">
+    <!-- Quick Actions Toggle -->
+    {#if hasApiKey}
+      <div class="flex justify-center mb-3">
+        <button
+          on:click={() => showQuickActions = !showQuickActions}
+          class="px-3 py-1 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1 touch-target"
+        >
+          <Sparkles class="w-3 h-3" />
+          Quick Actions
+          <span class="transform transition-transform {showQuickActions ? 'rotate-180' : ''}">
+            ▼
+          </span>
+        </button>
+      </div>
+    {/if}
+
     <div class="flex items-end space-x-3">
       <textarea
         bind:value={inputMessage}
         on:keydown={handleKeydown}
+        on:input={autoResizeTextarea}
         placeholder="Ask about European teams, leagues, matches, or patterns..."
-        class="flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[3rem] max-h-[8rem]"
+        class="flex-1 resize-none rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+        style="height: {inputHeight}px; max-height: 120px;"
         rows="1"
       />
       <button
         on:click={sendMessage}
         disabled={!inputMessage.trim() || isTyping}
-        class="btn btn-primary p-3 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="btn btn-primary p-3 disabled:opacity-50 disabled:cursor-not-allowed touch-target min-w-[48px] min-h-[48px] flex items-center justify-center"
+        title="Send message"
       >
         <Send class="w-5 h-5" />
       </button>
@@ -324,21 +481,89 @@ Always provide clean, optimized SQL queries that work with these field names and
 </div>
 
 <style>
+  /* Touch-friendly interactions */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Mobile safe area support */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Textarea scrollbar styling */
   textarea {
     scrollbar-width: thin;
     scrollbar-color: theme('colors.slate.400') transparent;
   }
-  
+
   textarea::-webkit-scrollbar {
     width: 6px;
   }
-  
+
   textarea::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   textarea::-webkit-scrollbar-thumb {
     background-color: theme('colors.slate.400');
     border-radius: 3px;
+  }
+
+  /* Markdown content styling */
+  :global(.prose code) {
+    @apply bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-sm;
+  }
+
+  :global(.prose pre) {
+    @apply bg-slate-900 dark:bg-slate-950 text-green-400 p-4 rounded-lg overflow-x-auto my-4;
+  }
+
+  :global(.prose pre code) {
+    @apply bg-transparent p-0 text-inherit;
+  }
+
+  :global(.prose blockquote) {
+    @apply border-l-4 border-primary/30 pl-4 italic text-slate-600 dark:text-slate-400;
+  }
+
+  :global(.prose table) {
+    @apply w-full border-collapse border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden;
+  }
+
+  :global(.prose th),
+  :global(.prose td) {
+    @apply border border-slate-300 dark:border-slate-700 px-3 py-2 text-left;
+  }
+
+  :global(.prose th) {
+    @apply bg-slate-100 dark:bg-slate-800 font-semibold;
+  }
+
+  /* Code block styling */
+  :global(.code-block) {
+    @apply bg-slate-900 dark:bg-slate-950 text-green-400 p-4 rounded-lg overflow-x-auto my-4 text-sm font-mono;
+  }
+
+  /* Mobile responsiveness */
+  @media (max-width: 768px) {
+    .ai-assistant {
+      border-radius: 0;
+    }
+
+    .prose {
+      font-size: 14px;
+    }
+  }
+
+  /* Copy button animations */
+  .group:hover .opacity-0 {
+    opacity: 1;
+  }
+
+  /* Smooth transitions */
+  .transition-all {
+    transition: all 0.2s ease-in-out;
   }
 </style>
