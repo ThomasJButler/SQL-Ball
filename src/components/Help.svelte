@@ -16,7 +16,7 @@
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
   <!-- Header -->
-  <div class="glass-effect sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
+  <div class="glass-effect lg:sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold gradient-text">Help & Documentation</h1>
@@ -34,7 +34,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
       <!-- Sidebar Navigation -->
       <nav class="lg:col-span-1 {showMobileMenu ? 'block' : 'hidden'} sm:block">
-        <div class="glass-card p-4 sticky top-24">
+        <div class="glass-card p-4 lg:sticky lg:top-24">
           <h2 class="font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
             Documentation
           </h2>

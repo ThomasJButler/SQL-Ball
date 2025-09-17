@@ -334,14 +334,14 @@
 
   <!-- Stats Grid -->
   {#if loading}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {#each Array(4) as _}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg">
           <div class="animate-pulse">
-            <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-lg mb-3"></div>
-            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mb-2"></div>
-            <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded w-32 mb-2"></div>
-            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
+            <div class="w-8 h-8 sm:w-12 sm:h-12 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2 sm:mb-3"></div>
+            <div class="h-3 sm:h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 sm:w-24 mb-1 sm:mb-2"></div>
+            <div class="h-6 sm:h-8 bg-slate-200 dark:bg-slate-700 rounded w-20 sm:w-32 mb-1 sm:mb-2"></div>
+            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-12 sm:w-20"></div>
           </div>
         </div>
       {/each}
@@ -354,21 +354,21 @@
       </button>
     </div>
   {:else}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {#each stats as stat, i}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div class="flex items-start justify-between mb-4">
-            <div class="{stat.bgColor} p-3 rounded-lg">
-              <svelte:component this={stat.icon} class="w-6 h-6 {stat.color}" />
+        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+          <div class="flex items-start justify-between mb-2 sm:mb-4">
+            <div class="{stat.bgColor} p-2 sm:p-3 rounded-lg">
+              <svelte:component this={stat.icon} class="w-4 h-4 sm:w-6 sm:h-6 {stat.color}" />
             </div>
           </div>
-          <div class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
             {stat.title}
           </div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
             {stat.value}
           </div>
-          <div class="text-xs text-slate-500 dark:text-slate-500">
+          <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
             {stat.change}
           </div>
         </div>
