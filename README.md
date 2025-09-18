@@ -2,6 +2,8 @@
 
 SQL-Ball is a football analytics platform that transforms football match data into actionable insights through interactive visualizations and natural language queries. This project was developed as a content project for the **CodeCademy Mastering Generative AI for Developers Bootcamp** held from August to September 2025.
 
+<img width="1261" height="621" alt="image" src="https://github.com/user-attachments/assets/407966f8-e680-458a-aa7a-a3d66b7d1318" />
+
 ## Overview
 
 SQL-Ball allows users to:
