@@ -1,3 +1,11 @@
+/**
+ * @author Tom Butler
+ * @date 2025-10-21
+ * @description AI assistant service for natural language interactions and match predictions.
+ *              Supports OpenAI and Anthropic APIs. Generates football predictions using Poisson distribution,
+ *              interprets user queries against match context, and manages API key configuration.
+ */
+
 import { dataService } from './dataService';
 
 interface AIMessage {
@@ -99,8 +107,7 @@ class AIService {
           mostLikelyScore = score;
         }
       });
-      
-      // Create visual bar chart representation
+
       const homeWinBar = '█'.repeat(Math.round(outcomeProbabilities.homeWin * 20));
       const drawBar = '█'.repeat(Math.round(outcomeProbabilities.draw * 20));
       const awayWinBar = '█'.repeat(Math.round(outcomeProbabilities.awayWin * 20));
@@ -135,7 +142,6 @@ ${awayWinBar}
   
   private async getMatchContext(): Promise<string> {
     try {
-      // Get recent matches and upcoming fixtures from dataService
       const [recentMatches, upcomingMatches] = await Promise.all([
         dataService.getMatches({ recent: true, days: 7 }),
         dataService.getMatches({ upcoming: true, days: 7 })
@@ -185,8 +191,7 @@ ${awayWinBar}
             hour: '2-digit',
             minute: '2-digit'
           });
-          
-          // Check if it's tomorrow
+
           const tomorrow = new Date(today);
           tomorrow.setDate(tomorrow.getDate() + 1);
           const isTomorrow = matchDate.toDateString() === tomorrow.toDateString();
@@ -216,10 +221,8 @@ ${awayWinBar}
     }
     
     try {
-      // Get current match context
       const matchContext = await this.getMatchContext();
-      
-      // Check if user is asking for a prediction
+
       const isPredictionRequest = userMessage.toLowerCase().includes('predict') || 
                                  userMessage.toLowerCase().includes('prediction') ||
                                  userMessage.toLowerCase().includes('vs') ||

@@ -1,3 +1,10 @@
+<!--
+@author Tom Butler
+@date 2025-10-21
+@description Help and documentation component. Provides user guidance on platform features, architecture,
+             tech stack, troubleshooting, and FAQ. Organises content into collapsible sections with
+             syntax-highlighted code examples and external resource links.
+-->
 <script lang="ts">
   import { Book, HelpCircle, TrendingUp, Shield, Zap, ExternalLink, ChevronRight, Home } from 'lucide-svelte';
   import { fade, fly } from 'svelte/transition';
@@ -342,7 +349,7 @@
               </div>
 
               <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <h4 class="font-semibold mb-2">✨ RAG Enhancement</h4>
+                <h4 class="font-semibold mb-2">RAG Enhancement</h4>
                 <p class="text-sm">
                   The raw data is enhanced with a Python backend that connects to Supabase and performs 
                   RAG (Retrieval-Augmented Generation) processing. This enables natural language queries 

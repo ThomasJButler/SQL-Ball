@@ -1,6 +1,9 @@
 """
-LangChain SQL Chain for SQL-Ball
-Converts natural language to SQL using RAG
+@author Tom Butler
+@date 2025-10-21
+@description LangChain-based SQL query generation using Retrieval-Augmented Generation.
+             Converts natural language questions into PostgreSQL queries with schema context,
+             applies football terminology mapping, and implements SQL validation/repair logic.
 """
 
 from langchain.chains import create_sql_query_chain
@@ -30,7 +33,6 @@ class SQLChain:
             self.supabase: Optional[Client] = None
             print("Warning: Supabase configuration missing")
 
-        # Create prompt template
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert PostgreSQL query generator for a Supabase football (soccer) analytics database.
 
@@ -105,17 +107,17 @@ class SQLChain:
             14. Join leagues table when you need league names or country information
 
             EXAMPLES OF CORRECT vs INCORRECT SQL:
-            ❌ WRONG: WHERE date > '2024-01-01'
-            ✅ CORRECT: WHERE match_date > '2024-01-01'
+            WRONG: WHERE date > '2024-01-01'
+            CORRECT: WHERE match_date > '2024-01-01'
 
-            ❌ WRONG: WHERE div = 'Premier League'
-            ✅ CORRECT: WHERE div = 'E0'
+            WRONG: WHERE div = 'Premier League'
+            CORRECT: WHERE div = 'E0'
 
-            ❌ WRONG: WHERE season = "2024-2025"
-            ✅ CORRECT: WHERE season = '2024-2025'
+            WRONG: WHERE season = "2024-2025"
+            CORRECT: WHERE season = '2024-2025'
 
-            ❌ WRONG: SELECT * FROM matches WHERE league = 'England'
-            ✅ CORRECT: SELECT m.* FROM matches m JOIN leagues l ON m.div = l.code WHERE l.country = 'England'
+            WRONG: SELECT * FROM matches WHERE league = 'England'
+            CORRECT: SELECT m.* FROM matches m JOIN leagues l ON m.div = l.code WHERE l.country = 'England'
 
             The season parameter provided in this request is: {season}
             ALWAYS use this exact season value unless explicitly told otherwise.
@@ -141,21 +143,17 @@ class SQLChain:
         if not current_api_key:
             raise ValueError("OpenAI API key is required. Please provide it in the request or set VITE_OPENAI_API_KEY environment variable.")
 
-        # Create LLM instance with the appropriate API key
         self.llm = ChatOpenAI(
             model="gpt-4",
             temperature=0,
             api_key=current_api_key
         )
 
-        # Map football terms
         modified_query, mappings = self.football_mapper.map_query(question)
 
-        # Get relevant schema context
         schema_results = self.schema_embedder.search_schema(question, n_results=3)
         schema_context = "\n".join([r['document'] for r in schema_results])
 
-        # Get contextual hints
         hints = self.football_mapper.get_context_hints(question)
 
         # Generate SQL using LangChain
@@ -179,10 +177,8 @@ class SQLChain:
         # Execute query
         results = await self._execute_query(sql)
 
-        # Get optimization suggestions
         optimizations = self.football_mapper.suggest_optimizations(sql)
 
-        # Generate explanation if requested
         explanation = None
         if include_explanation:
             explanation = await self._generate_explanation(question, sql, mappings)
@@ -294,7 +290,7 @@ class SQLChain:
 
         # Check for truncated queries (common issue)
         if sql.count("(") != sql.count(")"):
-            print(f"⚠️  WARNING: Unbalanced parentheses detected in SQL: {sql}")
+            print(f"WARNING: Unbalanced parentheses detected in SQL: {sql}")
             # Try to fix by completing common patterns
             if "SUM(CASE WHEN" in sql and not sql.endswith("END)"):
                 sql += " END)"
@@ -309,7 +305,7 @@ class SQLChain:
         # Look for impossible conditions like season = 'A' AND season = 'B'
         season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", sql, re.IGNORECASE)
         if len(season_matches) > 1 and len(set(season_matches)) > 1:
-            print(f"🔧 FIXING: Found conflicting seasons: {season_matches}")
+            print(f"FIXING: Found conflicting seasons: {season_matches}")
 
             # Keep only the first season occurrence and remove all others
             first_match = re.search(r"season\s*=\s*['\"][^'\"]+['\"]", sql, re.IGNORECASE)
@@ -336,7 +332,7 @@ class SQLChain:
 
                     sql = sql[:insert_pos].rstrip() + f" WHERE {first_season_clause} " + sql[insert_pos:]
 
-            print(f"🔧 FIXED SQL: {sql}")
+            print(f"FIXED SQL: {sql}")
 
         # Fix common SQL ordering issues
         # Check if WHERE is after GROUP BY (common GPT error)
@@ -376,7 +372,7 @@ class SQLChain:
 
         # Validate final query
         if not self._validate_sql(sql):
-            print(f"⚠️  WARNING: Generated SQL may have issues: {sql}")
+            print(f"WARNING: Generated SQL may have issues: {sql}")
 
         # Ensure semicolon at end
         if not sql.strip().endswith(";"):
@@ -425,11 +421,11 @@ class SQLChain:
 
         # If there are seasons in the SQL but none match the requested season
         if season_matches and requested_season not in season_matches:
-            print(f"🔧 SEASON VALIDATION: SQL uses {season_matches} but request asks for '{requested_season}'")
+            print(f"SEASON VALIDATION: SQL uses {season_matches} but request asks for '{requested_season}'")
 
             # Replace all season references with the requested season
             sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{requested_season}'", sql, flags=re.IGNORECASE)
-            print(f"🔧 CORRECTED: Now using season = '{requested_season}'")
+            print(f"CORRECTED: Now using season = '{requested_season}'")
 
         return sql
 
@@ -514,15 +510,15 @@ class SQLChain:
         """Optimize an existing SQL query"""
         optimizations = self.football_mapper.suggest_optimizations(sql)
 
-        # Use LLM to suggest optimized version
+        # Use LLM to suggest optimised version
         optimize_prompt = f"""
-        Optimize this SQL query for better performance:
+        Optimise this SQL query for better performance:
 
         Original SQL: {sql}
 
         Current suggestions: {json.dumps(optimizations)}
 
-        Provide an optimized version of the query and explain the improvements.
+        Provide an optimised version of the query and explain the improvements.
         """
 
         try:
@@ -530,14 +526,14 @@ class SQLChain:
                 return {
                     "original_sql": sql,
                     "optimized_sql": sql,
-                    "explanation": "Optimization requires LLM initialization",
+                    "explanation": "Optimisation requires LLM initialisation",
                     "suggestions": optimizations
                 }
                 
             response = await self.llm.ainvoke(optimize_prompt)
             content = response.content
 
-            # Parse response to extract optimized SQL
+            # Parse response to extract optimised SQL
             optimized_sql = sql  # Fallback to original
             
             # Convert content to string if needed

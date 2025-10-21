@@ -1,3 +1,10 @@
+<!--
+@author Tom Butler
+@date 2025-10-21
+@description Interactive visualisation component for European league analytics. Renders team performance
+             radars, goals-over-time trends, win distribution charts, and streaming animations.
+             Filters data by selected league and initialises Chart.js theme from DOM.
+-->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Line, Bar, Doughnut, Radar } from 'svelte-chartjs';
@@ -153,7 +160,6 @@
     }
   })();
 
-  // Goals Over Time Chart (enhanced with more data points)
   $: goalsOverTimeData = (() => {
     const recentMatches = filteredMatches.slice(-20); // Show last 20 matches
     const labels = recentMatches.map(m => format(new Date(m.match_date), 'MMM dd'));

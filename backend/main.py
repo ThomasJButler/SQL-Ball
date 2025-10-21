@@ -1,6 +1,9 @@
 """
-SQL-Ball FastAPI Backend
-RAG-powered football analytics with natural language to SQL conversion
+@author Tom Butler
+@date 2025-10-21
+@description FastAPI backend server for SQL-Ball. Initialises RAG components (schema embeddings,
+             SQL chain, football terminology mapper) on startup. Configures CORS and exposes
+             API routers for query processing, optimisation, and execution.
 """
 
 from fastapi import FastAPI, HTTPException
@@ -53,7 +56,7 @@ async def startup_event():
     """Initialize RAG components on startup"""
     global schema_embedder, sql_chain, football_mapper
 
-    print("🚀 Initializing SQL-Ball RAG system...")
+    print("Initialising SQL-Ball RAG system...")
 
     # Initialize schema embedder
     schema_embedder = SchemaEmbedder()
@@ -69,7 +72,7 @@ async def startup_event():
     set_query_deps(sql_chain, schema_embedder)
     set_sql_chain(sql_chain)
 
-    print("✅ RAG system initialized successfully!")
+    print("RAG system initialised successfully!")
 
 # Include routers
 app.include_router(query_router, prefix="/api")

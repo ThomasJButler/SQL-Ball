@@ -1,3 +1,11 @@
+/**
+ * @author Tom Butler
+ * @date 2025-10-21
+ * @description Pattern discovery engine for European football match data. Identifies statistical
+ *              anomalies including upsets, high-scoring matches, comebacks, and team performance streaks.
+ *              Returns patterns ranked by statistical significance for dashboard visualisation.
+ */
+
 import { supabase, type Match, type UnusualMatch } from '../supabase';
 
 export interface Pattern {
@@ -47,7 +55,7 @@ export class PatternDiscovery {
     return upsets.slice(0, limit).map((match: any) => ({
       id: match.id.toString(),
       type: 'upset' as PatternType,
-      title: `🚨 European Upset: ${match.away_team} destroyed ${match.home_team} (${match.div} League)`,
+      title: `European Upset: ${match.away_team} destroyed ${match.home_team} (${match.div} League)`,
       description: `${match.away_team} won ${match.away_score}-${match.home_score} away at ${match.home_team} - a stunning ${match.away_score - match.home_score} goal victory in the ${match.div} league!`,
       data: match,
       significance: (match.away_score - match.home_score) >= 4 ? 'very-high' : 'high',
@@ -77,7 +85,7 @@ export class PatternDiscovery {
       return {
         id: match.id.toString(),
         type: 'high-scoring' as PatternType,
-        title: `⚽ ${totalGoals}-Goal Thriller: ${match.home_team} vs ${match.away_team} (${match.div})`,
+        title: `${totalGoals}-Goal Thriller: ${match.home_team} vs ${match.away_team} (${match.div})`,
         description: `An incredible ${totalGoals} goals scored in the ${match.div} league! ${match.home_team} ${match.home_score}-${match.away_score} ${match.away_team}`,
         data: match,
         significance: totalGoals >= 8 ? 'very-high' : totalGoals >= 6 ? 'high' : 'medium',
@@ -107,7 +115,7 @@ export class PatternDiscovery {
       return {
         id: match.id,
         type: 'inefficient' as PatternType,
-        title: `❌ Wasteful: ${team} couldn't finish (${match.div} League)`,
+        title: `Wasteful: ${team} couldn't finish (${match.div} League)`,
         description: `${team} had ${shots ?? 0} shots on target but only scored ${goals ?? 0} goal(s) in the ${match.div} league - a shocking conversion rate of ${shots ? (((goals ?? 0) / shots) * 100).toFixed(1) : '0.0'}%`,
         data: match,
         significance: (shots ?? 0) >= 15 ? 'high' : 'medium',
@@ -135,7 +143,7 @@ export class PatternDiscovery {
       return {
         id: match.id,
         type: 'comeback' as PatternType,
-        title: `🔥 Comeback Kings: ${team} turned it around (${match.div})`,
+        title: `Comeback Kings: ${team} turned it around (${match.div})`,
         description: `${team} came from behind at half-time to beat ${opponent} ${match.home_score ?? 0}-${match.away_score ?? 0} in an epic ${match.div} league comeback!`,
         data: match,
         significance: 'high',
@@ -255,7 +263,7 @@ export class PatternDiscovery {
   // Epic European league pattern discovery
   async discoverPatterns(): Promise<Pattern[]> {
     try {
-      console.log('🔍 Discovering patterns across 7,681 European league matches...');
+      console.log('Discovering patterns across 7,681 European league matches...');
 
       const [upsets, highScoring, inefficiencies, comebacks, refereePatterns] = await Promise.all([
         this.findUpsets(15),

@@ -1,5 +1,8 @@
 """
-Query API endpoints for SQL-Ball
+@author Tom Butler
+@date 2025-10-21
+@description Natural language query API endpoint. Converts plain English questions into SQL queries,
+             retrieves schema context, validates input, and returns results with explanations.
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -75,8 +78,8 @@ async def process_natural_language_query(request: QueryRequest):
 
     except Exception as e:
         # Log the full error for debugging
-        print(f"🚨 ERROR: Query processing failed: {str(e)}")
-        print(f"🚨 Question: {request.question}")
+        print(f"ERROR: Query processing failed: {str(e)}")
+        print(f"Question: {request.question}")
 
         # Return more specific error messages
         error_msg = str(e).lower()

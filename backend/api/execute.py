@@ -1,5 +1,8 @@
 """
-SQL Execution API endpoints for SQL-Ball
+@author Tom Butler
+@date 2025-10-21
+@description SQL execution endpoint. Receives SQL queries, applies PostgreSQL compatibility fixes,
+             validates them, and executes via Supabase RPC. Handles error cases and season validation.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -38,7 +41,7 @@ async def execute_sql_query(request: ExecuteRequest):
     """
     try:
         # Debug logging
-        print(f"🔍 DEBUG: Received SQL query: {request.sql}")
+        print(f"DEBUG: Received SQL query: {request.sql}")
         
         # Clean the SQL - remove trailing semicolon for Supabase RPC
         clean_sql = request.sql.strip().rstrip(';')
@@ -56,14 +59,14 @@ async def execute_sql_query(request: ExecuteRequest):
         # AGGRESSIVE FIX: Detect and fix conflicting season conditions
         season_matches = re.findall(r"season\s*=\s*['\"]([^'\"]+)['\"]", clean_sql, re.IGNORECASE)
         if len(season_matches) > 1 and len(set(season_matches)) > 1:
-            print(f"🚨 EXECUTE: Found conflicting seasons: {season_matches}")
+            print(f"EXECUTE: Found conflicting seasons: {season_matches}")
             # Keep only the first season condition
             first_season = season_matches[0]
             clean_sql = re.sub(r"season\s*=\s*['\"][^'\"]+['\"]", f"season = '{first_season}'", clean_sql, flags=re.IGNORECASE)
             # Clean up multiple ANDs
             clean_sql = re.sub(r"\bAND\s+season\s*=\s*['\"][^'\"]+['\"]", "", clean_sql, flags=re.IGNORECASE)
             clean_sql = re.sub(r"\bAND\s+AND\b", "AND", clean_sql, flags=re.IGNORECASE)
-            print(f"🔧 EXECUTE: Fixed to use only '{first_season}': {clean_sql}")
+            print(f"EXECUTE: Fixed to use only '{first_season}': {clean_sql}")
 
         # CRITICAL POSTGRESQL FIXES:
         # Fix boolean comparisons: finished = 1 -> finished = true
@@ -73,9 +76,9 @@ async def execute_sql_query(request: ExecuteRequest):
         # Fix column names that don't exist
         clean_sql = re.sub(r'\bdate\b', 'kickoff_time', clean_sql, flags=re.IGNORECASE)
 
-        print(f"🔧 EXECUTE: Applied PostgreSQL fixes: {clean_sql}")
-        
-        print(f"🔍 DEBUG: Fixed SQL query: {clean_sql}")
+        print(f"EXECUTE: Applied PostgreSQL fixes: {clean_sql}")
+
+        print(f"DEBUG: Fixed SQL query: {clean_sql}")
         
         # Validate it's a SELECT query for security
         if not clean_sql.upper().strip().startswith('SELECT'):
@@ -111,8 +114,8 @@ async def execute_sql_query(request: ExecuteRequest):
         raise
     except Exception as e:
         # Log the full error for debugging
-        print(f"🚨 ERROR: SQL execution failed: {str(e)}")
-        print(f"🚨 SQL that failed: {clean_sql}")
+        print(f"ERROR: SQL execution failed: {str(e)}")
+        print(f"SQL that failed: {clean_sql}")
 
         # Return more specific error messages
         if "does not exist" in str(e).lower():

@@ -1,3 +1,11 @@
+/**
+ * @author Tom Butler
+ * @date 2025-10-21
+ * @description LangChain-based query generator for converting natural language to SQL.
+ *              Enhances queries with football terminology, integrates schema embeddings,
+ *              and falls back to template-based generation when LLM is unavailable.
+ */
+
 import { ChatOpenAI } from '@langchain/openai';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { LLMChain } from 'langchain/chains';
@@ -138,18 +146,18 @@ Provide a brief explanation (2-3 sentences) that:
 
   async generateQuery(naturalQuery: string): Promise<QueryResult> {
     try {
-      console.log(`🔍 Generating query for: "${naturalQuery}"`);
-      
+      console.log(`Generating query for: "${naturalQuery}"`);
+
       // 1. Enhance query with football-specific terms
       const enhancedQuery = this.enhanceQueryWithFootballTerms(naturalQuery);
-      console.log(`🏈 Enhanced query: "${enhancedQuery}"`);
-      
+      console.log(`Enhanced query: "${enhancedQuery}"`);
+
       // 2. Search for relevant schema information
       await this.schemaEmbeddings.initialize();
       const schemaResults = await this.schemaEmbeddings.searchSchema(enhancedQuery);
       const relevantTables = await this.schemaEmbeddings.getRelevantTables(enhancedQuery);
-      
-      console.log(`📊 Found ${schemaResults.length} schema matches, ${relevantTables.length} relevant tables`);
+
+      console.log(`Found ${schemaResults.length} schema matches, ${relevantTables.length} relevant tables`);
       
       // 3. Build schema context
       const schemaContext = schemaResults
@@ -158,7 +166,7 @@ Provide a brief explanation (2-3 sentences) that:
       
       // 4. Check if we have OpenAI API key for generation
       if (!this.apiKey || this.apiKey === '') {
-        console.log('⚠️ No OpenAI API key - using template-based generation');
+        console.log('No OpenAI API key - using template-based generation');
         return this.generateTemplateBasedQuery(naturalQuery, relevantTables);
       }
       

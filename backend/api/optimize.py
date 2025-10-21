@@ -1,5 +1,8 @@
 """
-Query Optimization API endpoints
+@author Tom Butler
+@date 2025-10-21
+@description Query optimisation API endpoints. Analyses SQL for performance improvements,
+             discovers patterns in queries, generates suggestions, and explains query execution plans.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -194,25 +197,25 @@ async def explain_query_plan(sql: str):
     # Analyze query components
     if "SELECT" in sql_upper:
         if "*" in sql:
-            explanation_parts.append("📊 Selecting all columns (consider specifying only needed columns)")
+            explanation_parts.append("Selecting all columns (consider specifying only needed columns)")
         else:
-            explanation_parts.append("✅ Selecting specific columns (good practice)")
+            explanation_parts.append("Selecting specific columns (good practice)")
 
     if "JOIN" in sql_upper:
         join_count = sql_upper.count("JOIN")
-        explanation_parts.append(f"🔗 Joining {join_count} table(s)")
+        explanation_parts.append(f"Joining {join_count} table(s)")
 
     if "WHERE" in sql_upper:
-        explanation_parts.append("🔍 Filtering results with WHERE clause")
+        explanation_parts.append("Filtering results with WHERE clause")
 
     if "GROUP BY" in sql_upper:
-        explanation_parts.append("📈 Grouping results for aggregation")
+        explanation_parts.append("Grouping results for aggregation")
 
     if "ORDER BY" in sql_upper:
-        explanation_parts.append("🔤 Sorting results")
+        explanation_parts.append("Sorting results")
 
     if "LIMIT" in sql_upper:
-        explanation_parts.append("✂️ Limiting result set size")
+        explanation_parts.append("Limiting result set size")
 
     # Performance estimate
     estimated_speed = "Fast"
