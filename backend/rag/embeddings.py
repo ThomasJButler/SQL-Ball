@@ -1,6 +1,9 @@
 """
-Schema Embeddings for SQL-Ball
-Creates and manages vector embeddings of database schema
+@author Tom Butler
+@date 2025-10-21
+@description Vector embeddings manager for database schema using ChromaDB. Creates semantic
+             embeddings of table/column definitions, enables similarity search for relevant
+             schema context, and provides fallback text-based search for RAG retrieval.
 """
 
 import chromadb
@@ -35,10 +38,10 @@ class SchemaEmbedder:
         # Check if already embedded
         existing = self.collection.count()
         if existing > 0:
-            print(f"✅ Found {existing} existing schema embeddings")
+            print(f"Found {existing} existing schema embeddings")
             return
 
-        print("📚 Creating schema embeddings...")
+        print("Creating schema embeddings...")
         await self._embed_schema()
 
     async def _embed_schema(self):
@@ -143,7 +146,7 @@ class SchemaEmbedder:
             metadatas=processed_metadatas
         )
 
-        print(f"✅ Created {len(all_definitions)} schema embeddings")
+        print(f"Created {len(all_definitions)} schema embeddings")
 
     def search_schema(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """Search for relevant schema elements based on query"""

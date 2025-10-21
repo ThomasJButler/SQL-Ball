@@ -1,3 +1,10 @@
+<!--
+@author Tom Butler
+@date 2025-10-21
+@description Main dashboard component. Loads European league match data, generates statistical
+             visualisations, calculates performance projections, and displays unusual match patterns.
+             Manages loading state, error handling, and data aggregation across multiple data sources.
+-->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Line } from 'svelte-chartjs';
@@ -135,7 +142,6 @@
     }
   }
 
-  // Enhanced stats calculation for European league data
   async function calculateComprehensiveStats(matches: Match[]) {
     if (!matches || matches.length === 0) return;
 
@@ -438,7 +444,6 @@
   </div>
 
 
-  <!-- Enhanced Visualizations -->
   {#if !loading && recentMatches.length > 0}
     <div>
       <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 🚀 MATRIX THEME CSS VARIABLES */
+/* MATRIX THEME CSS VARIABLES */
 :root {
   --matrix-green: #00ff00;
   --matrix-green-dark: #00cc00;
@@ -94,7 +94,7 @@
 }
 
 @layer components {
-  /* --- Enhanced Card --- */
+  /* Card */
   .card {
     @apply rounded-xl shadow-lg transition-all duration-300;
     @apply border-slate-200 dark:border-slate-700;
@@ -400,7 +400,7 @@
     animation: fadeIn 0.2s ease-out;
   }
 
-  /* 🎨 ENHANCED MODERN COMPONENTS */
+  /* MODERN COMPONENTS */
   
   /* Glassmorphism Cards */
   .card {
@@ -437,7 +437,7 @@
     background: rgba(30, 41, 59, 0.5);
   }
 
-  /* Enhanced Glass Cards */
+  /* Glass Cards */
   .card-glass {
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(25px);
@@ -520,7 +520,7 @@
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
   }
 
-  /* Enhanced Buttons */
+  /* Buttons */
   .btn {
     @apply relative px-6 py-3 rounded-xl font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 overflow-hidden;
     background: var(--gradient-primary);
@@ -604,7 +604,7 @@
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
   }
 
-  /* Enhanced Badges */
+  /* Badges */
   .badge {
     @apply inline-flex items-center px-4 py-2 rounded-full text-xs font-bold relative overflow-hidden;
     background: var(--gradient-primary);
@@ -679,7 +679,7 @@
     box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
   }
 
-  /* 🔥 SPECIAL EFFECTS */
+  /* SPECIAL EFFECTS */
   
   /* Pulsing Live Indicator */
   .live-pulse {
@@ -750,7 +750,7 @@
     transform: translateY(-5px);
   }
 
-  /* 🚀 FLOATING ACTION BUTTONS */
+  /* FLOATING ACTION BUTTONS */
   .fab-button {
     @apply relative flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 hover:shadow-xl;
     background: var(--gradient-primary);
@@ -782,7 +782,7 @@
     transform: translateX(0);
   }
   
-  /* Enhanced button styles */
+  /* Ghost Button Styles */
   .btn-ghost {
     @apply bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200;
   }

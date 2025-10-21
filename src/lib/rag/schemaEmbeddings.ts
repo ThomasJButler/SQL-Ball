@@ -1,3 +1,11 @@
+/**
+ * @author Tom Butler
+ * @date 2025-10-21
+ * @description Vector embeddings manager using LangChain and ChromaDB. Maintains semantic index
+ *              of database schema for RAG retrieval. Provides similarity search with fallback to
+ *              text-based matching when vector store is unavailable.
+ */
+
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { Chroma } from '@langchain/community/vectorstores/chroma';
 import { Document } from '@langchain/core/documents';
@@ -121,15 +129,15 @@ export class SchemaEmbeddings {
     if (this.initialized) return;
 
     try {
-      console.log('🔍 Initializing schema embeddings...');
+      console.log('Initialising schema embeddings...');
       
       // Create documents from schema
       const documents = this.createSchemaDocuments();
-      console.log(`📄 Created ${documents.length} schema documents`);
+      console.log(`Created ${documents.length} schema documents`);
       
       // Check if we have OpenAI API key
       if (!this.apiKey || this.apiKey === '') {
-        console.warn('⚠️ No OpenAI API key found - using fallback text search');
+        console.warn('No OpenAI API key found - using fallback text search');
         this.initialized = true;
         return;
       }
@@ -144,11 +152,11 @@ export class SchemaEmbeddings {
       // Add documents to the vector store
       await this.vectorStore.addDocuments(documents);
       
-      console.log('✅ Schema embeddings initialized successfully!');
+      console.log('Schema embeddings initialised successfully!');
       this.initialized = true;
       
     } catch (error) {
-      console.error('❌ Failed to initialize schema embeddings:', error);
+      console.error('Failed to initialise schema embeddings:', error);
       // Continue without vector search - use fallback methods
       this.initialized = true;
     }
@@ -206,13 +214,13 @@ export class SchemaEmbeddings {
     
     if (!this.vectorStore) {
       // Fallback: Simple text-based search
-      console.log('🔍 Using fallback text search (no vector store)');
+      console.log('Using fallback text search (no vector store)');
       return this.fallbackTextSearch(query, k);
     }
     
     try {
       const results = await this.vectorStore.similaritySearch(query, k);
-      console.log(`🎯 Found ${results.length} relevant schema matches`);
+      console.log(`Found ${results.length} relevant schema matches`);
       return results;
     } catch (error) {
       console.error('Vector search failed, using fallback:', error);

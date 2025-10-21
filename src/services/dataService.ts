@@ -1,3 +1,11 @@
+/**
+ * @author Tom Butler
+ * @date 2025-10-21
+ * @description Primary data service managing football match data. Provides caching layer via IndexedDB,
+ *              handles Supabase queries for matches/standings/team stats, and manages data source
+ *              availability checking. Cache timeout configurable per use case.
+ */
+
 import type { Match, Season, TeamStats, Standing, TeamForm } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -17,7 +25,6 @@ class DataService {
   }
   
   private async initializeIndexedDB(): Promise<void> {
-    // Check for browser environment
     if (typeof window === 'undefined' || !('indexedDB' in window)) {
       console.warn('IndexedDB not available');
       return;
@@ -31,13 +38,12 @@ class DataService {
     
     request.onsuccess = () => {
       this.cacheDb = request.result;
-      console.log('IndexedDB initialized');
+      console.log('IndexedDB initialised');
     };
     
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      
-      // Create object stores for caching
+
       if (!db.objectStoreNames.contains('matches')) {
         const matchStore = db.createObjectStore('matches', { keyPath: 'id' });
         matchStore.createIndex('date', 'date', { unique: false });
@@ -66,9 +72,9 @@ class DataService {
       this.dataSource.available = !error;
 
       if (this.dataSource.available) {
-        console.log('✅ Supabase database is available');
+        console.log('Supabase database is available');
       } else {
-        console.error('❌ Supabase database connection failed:', error);
+        console.error('Supabase database connection failed:', error);
       }
     } catch (error) {
       console.error('Error checking database availability:', error);
@@ -283,8 +289,7 @@ class DataService {
       return [];
     }
   }
-  
-  // Get all seasons
+
   public async getAllSeasons(): Promise<Season[]> {
     const cacheKey = 'all_seasons';
 
@@ -311,7 +316,6 @@ class DataService {
     return [];
   }
 
-  // Get head to head statistics
   public async getHeadToHead(homeTeam: string, awayTeam: string): Promise<{
     homeWins: number;
     draws: number;
@@ -377,7 +381,6 @@ class DataService {
     }
   }
 
-  // Get matches by season
   public async getMatchesBySeason(seasonId: string): Promise<Match[]> {
     // For now, just return all matches since we only have current season
     return this.getMatches();
@@ -388,7 +391,6 @@ class DataService {
     console.log('Data source is always Supabase database');
   }
 
-  // Get current data source status
   public getStatus(): {
     primarySource: DataSource;
     cacheEnabled: boolean;

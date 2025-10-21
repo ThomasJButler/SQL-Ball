@@ -1,6 +1,9 @@
 """
-Football Terminology Mapper
-Maps football terms to SQL patterns
+@author Tom Butler
+@date 2025-10-21
+@description Football domain terminology mapper. Converts natural language football concepts
+             (team names, leagues, statistics terms) into SQL-compatible database references.
+             Provides context hints and optimisation suggestions for sports analytics queries.
 """
 
 from typing import Dict, List, Tuple, Any
