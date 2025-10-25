@@ -82,7 +82,10 @@ class DataService {
     }
   }
   
-  // Public API for checking data source status
+  /**
+   * Returns current data source availability status
+   * @return {{database: boolean, usingDatabase: boolean}} Status of database connection
+   */
   public getDataSourceStatus() {
     return {
       database: this.dataSource.available,
@@ -125,7 +128,10 @@ class DataService {
     });
   }
   
-  // Main data fetching methods - Supabase only
+  /**
+   * Fetches current active season from database with caching
+   * @return {Promise<Season | null>} Current season object or null if unavailable
+   */
   public async getCurrentSeason(): Promise<Season | null> {
     const cacheKey = 'current_season';
 
@@ -153,6 +159,15 @@ class DataService {
     return null;
   }
   
+  /**
+   * Fetches matches with optional filtering (upcoming/recent/specific matchday)
+   * @param {Object} options - Filter options for match selection
+   * @param {boolean} [options.upcoming] - Filter for upcoming matches only
+   * @param {boolean} [options.recent] - Filter for recent matches only
+   * @param {number} [options.days=7] - Number of days to include
+   * @param {number} [options.matchday] - Specific matchday to filter by
+   * @return {Promise<Match[]>} Array of match objects
+   */
   public async getMatches(options: {
     upcoming?: boolean;
     recent?: boolean;
@@ -196,6 +211,10 @@ class DataService {
     return this.getMatches();
   }
   
+  /**
+   * Fetches current league standings ordered by position
+   * @return {Promise<Standing[]>} Array of team standings
+   */
   public async getStandings(): Promise<Standing[]> {
     const cacheKey = 'current_standings';
 
@@ -222,6 +241,11 @@ class DataService {
     return [];
   }
   
+  /**
+   * Fetches comprehensive statistics for a specific team
+   * @param {string} teamName - Name of the team to fetch stats for
+   * @return {Promise<TeamStats | null>} Team statistics or null if not found
+   */
   public async getTeamStats(teamName: string): Promise<TeamStats | null> {
     const cacheKey = `team_stats_${teamName}`;
 
@@ -249,6 +273,12 @@ class DataService {
     return null;
   }
   
+  /**
+   * Calculates recent form for a team (last 5 matches)
+   * @param {string} teamName - Name of the team
+   * @param {Match[]} [matches] - Optional pre-fetched matches to analyse
+   * @return {Promise<TeamForm[]>} Array of form results (W/D/L with goals)
+   */
   public async getTeamForm(teamName: string, matches?: Match[]): Promise<TeamForm[]> {
     const cacheKey = `team_form_${teamName}_${matches?.length || 5}`;
 
@@ -290,6 +320,10 @@ class DataService {
     }
   }
 
+  /**
+   * Fetches all available seasons ordered by start date (newest first)
+   * @return {Promise<Season[]>} Array of all seasons
+   */
   public async getAllSeasons(): Promise<Season[]> {
     const cacheKey = 'all_seasons';
 
@@ -316,6 +350,12 @@ class DataService {
     return [];
   }
 
+  /**
+   * Fetches head-to-head statistics between two teams
+   * @param {string} homeTeam - Name of the home team
+   * @param {string} awayTeam - Name of the away team
+   * @return {Promise<Object>} Object with win/draw counts and match history
+   */
   public async getHeadToHead(homeTeam: string, awayTeam: string): Promise<{
     homeWins: number;
     draws: number;

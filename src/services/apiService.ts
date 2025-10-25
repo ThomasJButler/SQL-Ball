@@ -1,6 +1,8 @@
 /**
- * API Service Layer for Backend Communication
- * Handles all RAG-related API calls to the FastAPI backend
+ * @author Tom Butler
+ * @date 2025-10-25
+ * @description API service layer for backend communication. Handles RAG-related API calls
+ *              to FastAPI backend including query conversion, SQL optimisation, and pattern discovery.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -49,7 +51,8 @@ class APIService {
   };
 
   /**
-   * Health check for the API
+   * Checks backend API health and RAG initialisation status
+   * @return {Promise<boolean>} True if backend is healthy and RAG is initialised
    */
   async healthCheck(): Promise<boolean> {
     try {
@@ -63,7 +66,9 @@ class APIService {
   }
 
   /**
-   * Convert natural language to SQL
+   * Converts natural language question to SQL query using backend RAG system
+   * @param {QueryRequest} request - Query request with question, season, and optional API key
+   * @return {Promise<QueryResponse>} Generated SQL query with explanation and results
    */
   async convertToSQL(request: QueryRequest): Promise<QueryResponse> {
     try {
@@ -85,7 +90,9 @@ class APIService {
   }
 
   /**
-   * Optimize SQL query
+   * Optimises SQL query for better performance
+   * @param {OptimizeRequest} request - SQL query to optimise with optional context
+   * @return {Promise<OptimizeResponse>} Optimised SQL with performance improvements
    */
   async optimizeSQL(request: OptimizeRequest): Promise<OptimizeResponse> {
     try {
@@ -107,7 +114,9 @@ class APIService {
   }
 
   /**
-   * Discover patterns in the data
+   * Discovers patterns in football data (upsets, high-scoring games, anomalies, trends)
+   * @param {PatternDiscoveryRequest} request - Pattern type and filtering criteria
+   * @return {Promise<QueryResponse>} SQL query and results for discovered patterns
    */
   async discoverPatterns(request: PatternDiscoveryRequest): Promise<QueryResponse> {
     try {
@@ -129,7 +138,8 @@ class APIService {
   }
 
   /**
-   * Get database schema information
+   * Retrieves database schema information including tables and structure
+   * @return {Promise<SchemaResponse>} Database schema with tables and column definitions
    */
   async getSchema(): Promise<SchemaResponse> {
     try {
@@ -147,7 +157,10 @@ class APIService {
   }
 
   /**
-   * Validate SQL for common issues before execution
+   * Validates SQL for common issues before execution
+   * Checks for conflicting season conditions that would return zero results
+   * @param {string} sql - SQL query to validate
+   * @return {string[]} Array of validation error messages
    */
   private validateSQL(sql: string): string[] {
     const errors: string[] = [];
@@ -167,7 +180,10 @@ class APIService {
   }
 
   /**
-   * Execute SQL query (if backend is configured with database access)
+   * Executes SQL query via backend (requires database access configuration)
+   * Validates query before execution and handles backend errors gracefully
+   * @param {string} sql - SQL query to execute
+   * @return {Promise<any[]>} Query results as array of row objects
    */
   async executeSQL(sql: string): Promise<any[]> {
     try {
@@ -199,7 +215,9 @@ class APIService {
   }
 
   /**
-   * Check if backend API is available
+   * Checks if backend API is available with 5 second timeout
+   * Verifies both connectivity and RAG system initialisation
+   * @return {Promise<boolean>} True if backend is reachable and fully initialised
    */
   async isAvailable(): Promise<boolean> {
     try {
