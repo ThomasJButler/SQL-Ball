@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Season statistics dashboard with animated counters and categorised metrics.
+             Displays goals, matches, cards, and performance data with visual icons.
+-->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { tweened } from 'svelte/motion';

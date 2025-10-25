@@ -1,3 +1,8 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Sidebar navigation component with view switching and responsive mobile behaviour.
+-->
 <script lang="ts">
   import { LayoutDashboard, BarChart3, Bot, Settings, LogOut, Search, FileText, HelpCircle, Sparkles } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';

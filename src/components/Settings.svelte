@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Settings component for managing OpenAI API key configuration. Persists credentials
+             to localStorage with visibility toggle and validation feedback.
+-->
 <script lang="ts">
   import { Key, Save, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-svelte';
   let openAIKey = '';
@@ -5,7 +11,6 @@
   let saveStatus = '';
   let errorMessage = '';
 
-  // Load existing API key on mount
   function loadSettings() {
     const savedOpenAIKey = localStorage.getItem('openai_api_key');
     if (savedOpenAIKey) {

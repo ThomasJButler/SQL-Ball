@@ -1,5 +1,10 @@
-// Polyfill for ChromaDB default embeddings
-// This avoids the need for the @chroma-core/default-embed package
+/**
+ * @author Tom Butler
+ * @date 2025-10-25
+ * @description Polyfill for ChromaDB default embeddings. Provides dummy embedding function
+ *              to satisfy ChromaDB's internal checks whilst using OpenAI embeddings instead.
+ *              Avoids dependency on @chroma-core/default-embed package.
+ */
 
 export class DefaultEmbeddingFunction {
   public name = 'default-embedding';

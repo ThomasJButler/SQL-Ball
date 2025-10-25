@@ -1,3 +1,8 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Mobile bottom navigation bar for responsive view switching.
+-->
 <script lang="ts">
   import { LayoutDashboard, Search, Settings, Bot, HelpCircle } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
