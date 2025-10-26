@@ -348,6 +348,30 @@
         goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
       }
 
+      // Recalculate highest scoring match for the selected league
+      let highestMatchGoals = 0;
+      let highestMatchScore = '0-0';
+      let highestMatchHomeTeam = '';
+      let highestMatchAwayTeam = '';
+      let highestMatchDate = '';
+      freshData.recent_matches.forEach(m => {
+        const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+        if (totalGoals > highestMatchGoals) {
+          highestMatchGoals = totalGoals;
+          highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+          highestMatchHomeTeam = m.home_team || '';
+          highestMatchAwayTeam = m.away_team || '';
+          highestMatchDate = m.match_date || '';
+        }
+      });
+      highestScoringMatch = {
+        goals: highestMatchGoals,
+        score: highestMatchScore,
+        homeTeam: highestMatchHomeTeam,
+        awayTeam: highestMatchAwayTeam,
+        date: highestMatchDate
+      };
+
       console.log('Dashboard refreshed with league data:', {
         league: league || 'all',
         matches: freshData.recent_matches.length,

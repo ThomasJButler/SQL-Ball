@@ -933,7 +933,7 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <img src="/sqlballlogo.svg" alt="SQL Ball Logo" class="w-4 h-4 sm:w-5 sm:h-5" />
+          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
         </div>
         <button
