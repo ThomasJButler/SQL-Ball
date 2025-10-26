@@ -92,9 +92,9 @@ async def get_dashboard_matches(
         if league:
             query = query.eq('div', league)
 
-        # Fetch data ordered by oldest first to ensure full season coverage
-        # (instead of just most recent matches)
-        response = query.order('match_date', desc=False).limit(limit).execute()
+        # Fetch data ordered by newest first for better distribution across season
+        # With desc=True and high limit (5000), we get good coverage of all months
+        response = query.order('match_date', desc=True).limit(limit).execute()
 
         if response.data:
             # Cache the result
