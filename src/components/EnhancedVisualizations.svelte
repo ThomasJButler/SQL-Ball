@@ -179,16 +179,22 @@
     };
 
     try {
-      // Chart-specific prompts for SQL generation
+      // Chart-specific prompts for SQL generation - use explicit SQL templates for guaranteed compatibility
+      const leagueFilter = selectedDateRange === 'all' ? '' : ` AND div = '${selectedDateRange}'`;
+
       const prompts: Record<string, string> = {
-        'goals_trend': `Show the last 30 matches with their dates, home team, away team, home goals, and away goals. Order by most recent first. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
-        'league_table': `Calculate league standings showing team name, matches played, wins, draws, losses, goals for, goals against, goal difference, and total points. Order by points DESC, then goal difference DESC. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
-        'results_distribution': `Count the number of home wins, away wins, and draws. Group by match result. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
-        'goal_distribution': `Show the distribution of total goals per match. Count how many matches had 0 goals, 1 goal, 2 goals, etc. up to 6+ goals. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
-        'team_performance': `For the top 6 teams by points, show team name, total matches, wins, total goals scored, total goals conceded, and points. Order by points DESC. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`
+        'goals_trend': `Generate this exact SQL query: SELECT match_date, home_team, away_team, home_score, away_score FROM matches WHERE season = '${selectedSeason}'${leagueFilter} ORDER BY match_date DESC LIMIT 30`,
+
+        'league_table': `Generate this SQL query to calculate league standings from the matches table. For each team (both home and away), calculate total matches, wins (3 points), draws (1 point each), losses (0 points), goals for, goals against, goal difference, and total points. Use CASE statements for result counting where result 'H' = home win, 'A' = away win, 'D' = draw. Query: SELECT * FROM matches WHERE season = '${selectedSeason}'${leagueFilter}`,
+
+        'results_distribution': `Generate this exact SQL query: SELECT result, COUNT(*) as count FROM matches WHERE season = '${selectedSeason}'${leagueFilter} GROUP BY result`,
+
+        'goal_distribution': `Generate this exact SQL query: SELECT (home_score + away_score) as total_goals, COUNT(*) as match_count FROM matches WHERE season = '${selectedSeason}'${leagueFilter} GROUP BY (home_score + away_score) ORDER BY total_goals`,
+
+        'team_performance': `Generate this SQL query to get top teams by calculating stats for both home and away matches. For each unique team name, sum: total matches played, total wins (where result is 'H' for home team or 'A' for away team), total goals scored (home_score for home matches + away_score for away matches), total goals conceded, and calculate points (wins * 3 + draws * 1). Order by points DESC. Limit to top 6 teams. Use data from matches WHERE season = '${selectedSeason}'${leagueFilter}`
       };
 
-      const prompt = prompts[chartType] || 'Show match statistics';
+      const prompt = prompts[chartType] || `Generate this exact SQL query: SELECT * FROM matches WHERE season = '${selectedSeason}' LIMIT 100`;
 
       // Generate SQL using the RAG API
       const queryResponse = await apiService.convertToSQL({
@@ -220,28 +226,61 @@
 
     const insights: string[] = [];
 
-    if (chartType === 'goals_trend') {
-      const avgGoals = results.reduce((sum, r) => sum + ((r.home_score || 0) + (r.away_score || 0)), 0) / results.length;
-      insights.push(`Average goals per match: ${avgGoals.toFixed(2)}`);
-      const highScoring = results.filter(r => (r.home_score + r.away_score) >= 4).length;
-      insights.push(`${highScoring} high-scoring matches (4+ goals)`);
-    } else if (chartType === 'league_table') {
-      if (results[0]) {
-        insights.push(`Top team: ${results[0].team || results[0].Team} with ${results[0].points || results[0].Points} points`);
+    try {
+      if (chartType === 'goals_trend') {
+        const totalGoals = results.reduce((sum, r) => sum + ((r.home_score || 0) + (r.away_score || 0)), 0);
+        const avgGoals = totalGoals / Math.max(results.length, 1);
+        insights.push(`${results.length} matches analyzed with ${totalGoals} total goals`);
+        insights.push(`Average goals per match: ${avgGoals.toFixed(2)}`);
+        const highScoring = results.filter(r => ((r.home_score || 0) + (r.away_score || 0)) >= 4).length;
+        if (highScoring > 0) {
+          insights.push(`${highScoring} high-scoring matches (4+ goals)`);
+        }
+      } else if (chartType === 'league_table') {
+        insights.push(`${results.length} teams in standings`);
+        if (results[0]) {
+          const topTeam = results[0];
+          const teamName = topTeam.team_name || topTeam.team || topTeam.Team || 'Unknown';
+          const points = topTeam.points || topTeam.Points || 0;
+          insights.push(`Top team: ${teamName} with ${points} points`);
+        }
+      } else if (chartType === 'results_distribution') {
+        const totalMatches = results.reduce((sum, r) => sum + (r.count || r.Count || 0), 0);
+        const homeWins = results.find(r => (r.result === 'H' || r.Result === 'H'))?.count || results.find(r => (r.result === 'H' || r.Result === 'H'))?.Count || 0;
+        const awayWins = results.find(r => (r.result === 'A' || r.Result === 'A'))?.count || results.find(r => (r.result === 'A' || r.Result === 'A'))?.Count || 0;
+        const draws = results.find(r => (r.result === 'D' || r.Result === 'D'))?.count || results.find(r => (r.result === 'D' || r.Result === 'D'))?.Count || 0;
+
+        insights.push(`Total matches: ${totalMatches}`);
+        if (totalMatches > 0) {
+          insights.push(`Home wins: ${homeWins} (${((homeWins / totalMatches) * 100).toFixed(1)}%)`);
+          insights.push(`Away wins: ${awayWins} (${((awayWins / totalMatches) * 100).toFixed(1)}%)`);
+          insights.push(`Draws: ${draws} (${((draws / totalMatches) * 100).toFixed(1)}%)`);
+        }
+      } else if (chartType === 'goal_distribution') {
+        const sorted = [...results].sort((a, b) => (b.match_count || b.Count || 0) - (a.match_count || a.Count || 0));
+        if (sorted[0]) {
+          const mostCommonGoals = sorted[0].total_goals || sorted[0].goals || sorted[0].Goals || 0;
+          const matchCount = sorted[0].match_count || sorted[0].Count || 0;
+          insights.push(`Most common: ${mostCommonGoals} goals per match (${matchCount} matches)`);
+        }
+        const totalMatches = results.reduce((sum, r) => sum + (r.match_count || r.Count || 0), 0);
+        insights.push(`Total matches analyzed: ${totalMatches}`);
+      } else if (chartType === 'team_performance') {
+        insights.push(`Top ${results.length} teams by performance`);
+        if (results[0]) {
+          const topTeam = results[0];
+          const teamName = topTeam.team_name || topTeam.team || topTeam.Team || 'Unknown';
+          const goals = topTeam.goals_scored || topTeam.goals || topTeam.Goals || 0;
+          const points = topTeam.points || topTeam.Points || 0;
+          insights.push(`Leader: ${teamName} - ${points} points, ${goals} goals`);
+        }
       }
-      insights.push(`${results.length} teams in standings`);
-    } else if (chartType === 'results_distribution') {
-      const homeWins = results.find(r => r.result === 'H' || r.Result === 'H')?.count || 0;
-      insights.push(`Home advantage: ${((homeWins / results.length) * 100).toFixed(1)}% home wins`);
-    } else if (chartType === 'goal_distribution') {
-      const mostCommon = results.sort((a, b) => (b.count || b.Count) - (a.count || a.Count))[0];
-      insights.push(`Most common: ${mostCommon?.goals || mostCommon?.Goals || 0} goals per match`);
-    } else if (chartType === 'team_performance') {
-      const topScorer = results.sort((a, b) => (b.goals || b.Goals) - (a.goals || a.Goals))[0];
-      insights.push(`Top scorer: ${topScorer?.team || topScorer?.Team} with ${topScorer?.goals || topScorer?.Goals} goals`);
+    } catch (error) {
+      console.error('Error generating insights:', error);
+      insights.push('Unable to generate detailed insights from data');
     }
 
-    return insights;
+    return insights.length > 0 ? insights : ['Data processed successfully'];
   }
 
   // Get current league's top teams
@@ -265,24 +304,46 @@
     // Use API data if available
     if (useApiData && apiChartData?.goals_trend) {
       const apiData = apiChartData.goals_trend;
-      // Transform API data to match Chart.js format with our styling
-      return {
-        labels: apiData.labels || [],
-        datasets: (apiData.datasets || []).map((dataset: any, index: number) => ({
-          ...dataset,
-          borderColor: index === 0 ? '#10b981' : index === 1 ? '#f59e0b' : '#ef4444',
-          backgroundColor: index === 0 ? 'rgba(16, 185, 129, 0.1)' : index === 1 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          tension: 0.4,
-          fill: index === 2,
-          pointRadius: index === 2 ? 4 : 3,
-          borderWidth: index === 2 ? 3 : 2
-        }))
-      };
+      // Validate API data has content
+      if (apiData.labels && apiData.labels.length > 0 && apiData.datasets && apiData.datasets.length > 0) {
+        // Transform API data to match Chart.js format with our styling
+        return {
+          labels: apiData.labels,
+          datasets: apiData.datasets.map((dataset: any, index: number) => ({
+            ...dataset,
+            borderColor: index === 0 ? '#10b981' : index === 1 ? '#f59e0b' : '#ef4444',
+            backgroundColor: index === 0 ? 'rgba(16, 185, 129, 0.1)' : index === 1 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            tension: 0.4,
+            fill: index === 2,
+            pointRadius: index === 2 ? 4 : 3,
+            borderWidth: index === 2 ? 3 : 2
+          }))
+        };
+      }
     }
 
     // Fallback to local computation
-    const recentMatches = filteredMatches.slice(-20); // Show last 20 matches
-    const labels = recentMatches.map(m => format(new Date(m.match_date), 'MMM dd'));
+    const recentMatches = filteredMatches.slice(-30); // Show last 30 matches
+
+    // If no matches available, return empty structure
+    if (recentMatches.length === 0) {
+      return {
+        labels: [],
+        datasets: [
+          { label: 'Home Goals', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4 },
+          { label: 'Away Goals', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', tension: 0.4 },
+          { label: 'Total Goals', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true }
+        ]
+      };
+    }
+
+    const labels = recentMatches.map(m => {
+      try {
+        return format(new Date(m.match_date), 'MMM dd');
+      } catch (e) {
+        return 'Invalid Date';
+      }
+    });
     const homeGoals = recentMatches.map(m => m.home_score || 0);
     const awayGoals = recentMatches.map(m => m.away_score || 0);
     const totalGoals = recentMatches.map(m => (m.home_score || 0) + (m.away_score || 0));
