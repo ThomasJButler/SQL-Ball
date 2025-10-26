@@ -161,10 +161,6 @@
         }
       }
 
-      // Update query count
-      const savedCount = localStorage.getItem('query_count');
-      queriesExecuted.set(savedCount ? parseInt(savedCount) : 0);
-
     } catch (err) {
       console.error('Dashboard error:', err);
       // Try fallback to direct Supabase if API fails
@@ -489,7 +485,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
         <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <BarChart2 class="w-5 h-5 text-blue-600" />
+          <Zap class="w-5 h-5 text-blue-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">RAG System</h4>
         <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
@@ -532,7 +528,7 @@
       {/if}
 
       <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
-        <BarChart2 class="w-8 h-8 text-green-500" />
+        <img src="/sqlballlogo.svg" alt="SQL Ball Logo" class="w-8 h-8" />
         European League Analytics
       </h2>
       <EnhancedVisualizations
