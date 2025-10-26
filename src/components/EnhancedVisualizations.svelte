@@ -26,7 +26,9 @@
   } from 'chart.js';
   import type { Match } from '../types';
   import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
-  import { Calendar, TrendingUp, Activity, BarChart3 } from 'lucide-svelte';
+  import { Calendar, TrendingUp, Activity, BarChart3, Sparkles } from 'lucide-svelte';
+  import QueryModal from './QueryModal.svelte';
+  import { apiService } from '../services/apiService';
 
   ChartJS.register(
     Title,
@@ -54,6 +56,17 @@
   let filteredMatches: Match[] = [];
   let chartTheme = 'dark';
   let isLoading = false;
+
+  // Query Modal state
+  let showQueryModal = false;
+  let queryModalData = {
+    chartName: '',
+    sql: '',
+    results: [],
+    insights: [],
+    isLoading: false,
+    error: null as string | null
+  };
   let previousRange = selectedDateRange;
 
   // League options
@@ -151,6 +164,84 @@
       .map(([team, _]) => team);
 
     return sortedTeams;
+  }
+
+  // Handle Query button click - generates SQL and fetches results
+  async function handleQueryClick(chartType: string, chartName: string) {
+    showQueryModal = true;
+    queryModalData = {
+      chartName,
+      sql: '',
+      results: [],
+      insights: [],
+      isLoading: true,
+      error: null
+    };
+
+    try {
+      // Chart-specific prompts for SQL generation
+      const prompts: Record<string, string> = {
+        'goals_trend': `Show the last 30 matches with their dates, home team, away team, home goals, and away goals. Order by most recent first. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
+        'league_table': `Calculate league standings showing team name, matches played, wins, draws, losses, goals for, goals against, goal difference, and total points. Order by points DESC, then goal difference DESC. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
+        'results_distribution': `Count the number of home wins, away wins, and draws. Group by match result. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
+        'goal_distribution': `Show the distribution of total goals per match. Count how many matches had 0 goals, 1 goal, 2 goals, etc. up to 6+ goals. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`,
+        'team_performance': `For the top 6 teams by points, show team name, total matches, wins, total goals scored, total goals conceded, and points. Order by points DESC. For the ${selectedDateRange === 'all' ? 'all leagues' : selectedDateRange} league.`
+      };
+
+      const prompt = prompts[chartType] || 'Show match statistics';
+
+      // Generate SQL using the RAG API
+      const queryResponse = await apiService.convertToSQL({
+        question: prompt,
+        season: selectedSeason
+      });
+
+      queryModalData.sql = queryResponse.sql;
+
+      // Execute the SQL
+      const results = await apiService.executeSQL(queryResponse.sql);
+      queryModalData.results = results.results || [];
+
+      // Generate key insights based on results
+      const insights = generateInsights(chartType, queryModalData.results);
+      queryModalData.insights = insights;
+
+      queryModalData.isLoading = false;
+    } catch (error) {
+      console.error('Query execution failed:', error);
+      queryModalData.error = error instanceof Error ? error.message : 'Failed to execute query';
+      queryModalData.isLoading = false;
+    }
+  }
+
+  // Generate insights from query results
+  function generateInsights(chartType: string, results: any[]): string[] {
+    if (!results || results.length === 0) return ['No data available for analysis'];
+
+    const insights: string[] = [];
+
+    if (chartType === 'goals_trend') {
+      const avgGoals = results.reduce((sum, r) => sum + ((r.home_score || 0) + (r.away_score || 0)), 0) / results.length;
+      insights.push(`Average goals per match: ${avgGoals.toFixed(2)}`);
+      const highScoring = results.filter(r => (r.home_score + r.away_score) >= 4).length;
+      insights.push(`${highScoring} high-scoring matches (4+ goals)`);
+    } else if (chartType === 'league_table') {
+      if (results[0]) {
+        insights.push(`Top team: ${results[0].team || results[0].Team} with ${results[0].points || results[0].Points} points`);
+      }
+      insights.push(`${results.length} teams in standings`);
+    } else if (chartType === 'results_distribution') {
+      const homeWins = results.find(r => r.result === 'H' || r.Result === 'H')?.count || 0;
+      insights.push(`Home advantage: ${((homeWins / results.length) * 100).toFixed(1)}% home wins`);
+    } else if (chartType === 'goal_distribution') {
+      const mostCommon = results.sort((a, b) => (b.count || b.Count) - (a.count || a.Count))[0];
+      insights.push(`Most common: ${mostCommon?.goals || mostCommon?.Goals || 0} goals per match`);
+    } else if (chartType === 'team_performance') {
+      const topScorer = results.sort((a, b) => (b.goals || b.Goals) - (a.goals || a.Goals))[0];
+      insights.push(`Top scorer: ${topScorer?.team || topScorer?.Team} with ${topScorer?.goals || topScorer?.Goals} goals`);
+    }
+
+    return insights;
   }
 
   // Get current league's top teams
@@ -683,9 +774,19 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
     <!-- Goals Over Time -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
-      <div class="flex items-center gap-2 mb-4">
-        <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
+        </div>
+        <button
+          on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          title="Generate SQL query for this chart"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Query</span>
+        </button>
       </div>
       <div class="h-48 sm:h-64">
         <Line data={goalsOverTimeData} options={chartOptions} />
@@ -694,9 +795,19 @@
 
     <!-- League Table (Top Teams) -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
-      <div class="flex items-center gap-2 mb-4">
-        <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">League Table</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">League Table</h3>
+        </div>
+        <button
+          on:click={() => handleQueryClick('league_table', 'League Table')}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          title="Generate SQL query for this chart"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Query</span>
+        </button>
       </div>
       <div class="h-48 sm:h-64">
         <Bar data={leagueTableData} options={chartOptions} />
@@ -705,9 +816,19 @@
 
     <!-- Results Distribution -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
-      <div class="flex items-center gap-2 mb-4">
-        <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Results Distribution</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Results Distribution</h3>
+        </div>
+        <button
+          on:click={() => handleQueryClick('results_distribution', 'Results Distribution')}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          title="Generate SQL query for this chart"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Query</span>
+        </button>
       </div>
       <div class="h-48 sm:h-64">
         <Doughnut data={resultsDistributionData} options={chartOptions} />
@@ -716,9 +837,19 @@
 
     <!-- Goal Distribution -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
-      <div class="flex items-center gap-2 mb-4">
-        <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals per Match</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals per Match</h3>
+        </div>
+        <button
+          on:click={() => handleQueryClick('goal_distribution', 'Goal Distribution')}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          title="Generate SQL query for this chart"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Query</span>
+        </button>
       </div>
       <div class="h-48 sm:h-64">
         <Bar data={goalDistributionData} options={chartOptions} />
@@ -728,14 +859,36 @@
 
   <!-- Team Performance Radar - Full Width on Mobile -->
   <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
-    <div class="flex items-center gap-2 mb-4">
-      <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-      <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
+      </div>
+      <button
+        on:click={() => handleQueryClick('team_performance', 'Team Performance')}
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+        title="Generate SQL query for this chart"
+      >
+        <Sparkles class="w-3.5 h-3.5" />
+        <span>Query</span>
+      </button>
     </div>
     <div class="h-64 sm:h-80">
       <Radar data={teamPerformanceData} options={radarOptions} />
     </div>
   </div>
+
+<!-- QueryModal -->
+<QueryModal
+  bind:isOpen={showQueryModal}
+  chartName={queryModalData.chartName}
+  sql={queryModalData.sql}
+  results={queryModalData.results}
+  insights={queryModalData.insights}
+  isLoading={queryModalData.isLoading}
+  error={queryModalData.error}
+  on:close={() => showQueryModal = false}
+/>
 </div>
 
 <style>
