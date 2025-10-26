@@ -323,13 +323,15 @@ async def get_chart_data(
                     if team and team not in teams_data:
                         teams_data[team] = {
                             "wins": 0, "points": 0, "goals": 0,
-                            "goals_against": 0, "matches": 0
+                            "goals_against": 0, "matches": 0, "clean_sheets": 0
                         }
 
                 if home_team:
                     teams_data[home_team]["matches"] += 1
                     teams_data[home_team]["goals"] += home_score
                     teams_data[home_team]["goals_against"] += away_score
+                    if away_score == 0:  # Clean sheet for home team
+                        teams_data[home_team]["clean_sheets"] += 1
                     if home_score > away_score:
                         teams_data[home_team]["wins"] += 1
                         teams_data[home_team]["points"] += 3
@@ -340,6 +342,8 @@ async def get_chart_data(
                     teams_data[away_team]["matches"] += 1
                     teams_data[away_team]["goals"] += away_score
                     teams_data[away_team]["goals_against"] += home_score
+                    if home_score == 0:  # Clean sheet for away team
+                        teams_data[away_team]["clean_sheets"] += 1
                     if away_score > home_score:
                         teams_data[away_team]["wins"] += 1
                         teams_data[away_team]["points"] += 3
@@ -361,7 +365,7 @@ async def get_chart_data(
                         stats["wins"] * 2,  # Wins scaled
                         (stats["points"] / matches_played) * 10,  # Points per game
                         (stats["goals"] / matches_played) * 15,  # Goals per game
-                        max(0, 20 - (stats["goals_against"] / matches_played * 10)),  # Defense
+                        stats["clean_sheets"] * 2,  # Clean sheets scaled
                         max(0, min(goal_diff * 2, 20))  # Form based on goal difference
                     ],
                     "borderColor": colors[idx],
@@ -369,7 +373,7 @@ async def get_chart_data(
                 })
 
             chart_data = ChartData(
-                labels=['Wins', 'Points/Game', 'Goals/Game', 'Defense', 'Form'],
+                labels=['Wins', 'Points/Game', 'Goals/Game', 'Clean Sheets', 'Form'],
                 datasets=datasets,
                 type="radar"
             )
