@@ -407,7 +407,7 @@ async def get_complete_dashboard(
     try:
         # Fetch all data in parallel
         stats_task = get_dashboard_stats(league)
-        matches_task = get_dashboard_matches(1000, league)
+        matches_task = get_dashboard_matches(5000, league)
         goals_chart_task = get_chart_data("goals_trend", league)
         results_chart_task = get_chart_data("results_distribution", league)
         table_chart_task = get_chart_data("league_table", league)
