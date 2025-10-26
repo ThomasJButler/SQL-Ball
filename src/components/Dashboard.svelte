@@ -111,11 +111,19 @@
         apiChartData = dashboardData.charts || null;
         useApiData = true;
 
+        // Populate goalsChart for Dashboard Goals Trend chart (even when using API)
+        if (dashboardData.recent_matches.length > 0) {
+          const last15 = dashboardData.recent_matches.slice(0, 15).reverse();
+          goalsChart.labels = last15.map(m => format(new Date(m.match_date), 'MMM d'));
+          goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
+        }
+
         console.log('Dashboard loaded from API:', {
           matches: dashboardData.recent_matches.length,
           totalMatches: dashboardData.stats.total_matches,
           totalGoals: dashboardData.stats.total_goals,
-          hasChartData: !!apiChartData
+          hasChartData: !!apiChartData,
+          goalsChartLabels: goalsChart.labels.length
         });
 
       } else {
@@ -289,10 +297,18 @@
       homeWinPercentage = freshData.stats.home_win_percentage;
       totalTeams = freshData.stats.total_teams;
 
+      // Update goalsChart with new league data
+      if (freshData.recent_matches.length > 0) {
+        const last15 = freshData.recent_matches.slice(0, 15).reverse();
+        goalsChart.labels = last15.map(m => format(new Date(m.match_date), 'MMM d'));
+        goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
+      }
+
       console.log('Dashboard refreshed with league data:', {
         league: league || 'all',
         matches: freshData.recent_matches.length,
-        hasCharts: !!apiChartData
+        hasCharts: !!apiChartData,
+        goalsChartLabels: goalsChart.labels.length
       });
 
     } catch (err) {
@@ -317,23 +333,32 @@
   let matchDistributionChart: ChartJS | null = null;
 
   $: if (recentMatches.length > 0 && chartCanvas) {
-    // Group matches by month
-    const monthCounts: Record<string, number> = {};
+    // Define all months in 2024-2025 football season (Sep 2024 - Jun 2025)
+    const seasonMonths = [
+      'Sep 2024', 'Oct 2024', 'Nov 2024', 'Dec 2024',
+      'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'
+    ];
 
+    // Initialize all months with 0 matches
+    const monthCounts: Record<string, number> = {};
+    seasonMonths.forEach(month => {
+      monthCounts[month] = 0;
+    });
+
+    // Count matches in each month
     recentMatches.forEach(match => {
       if (match.match_date) {
         const monthKey = format(new Date(match.match_date), 'MMM yyyy');
-        monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+        // Only count if it's in our season range
+        if (monthCounts.hasOwnProperty(monthKey)) {
+          monthCounts[monthKey]++;
+        }
       }
     });
 
-    // Sort months chronologically
-    const sortedMonths = Object.entries(monthCounts)
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .slice(-12); // Last 12 months
-
-    const labels = sortedMonths.map(([month]) => month);
-    const data = sortedMonths.map(([_, count]) => count);
+    // Use all season months in order (already sorted chronologically)
+    const labels = seasonMonths;
+    const data = seasonMonths.map(month => monthCounts[month]);
 
     // Update or create chart
     const ctx = chartCanvas.getContext('2d');
@@ -579,10 +604,27 @@
   {/if}
 
   <!-- Charts -->
-  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg max-w-4xl mx-auto">
-    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
-    <div class="h-64">
-      <canvas bind:this={chartCanvas}></canvas>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Goals Trend -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Goals Trend</h3>
+      <div class="h-64">
+        {#if !loading && goalsChart.labels && goalsChart.labels.length > 0}
+          <Line data={goalsChart} options={{ responsive: true, maintainAspectRatio: false }} />
+        {:else}
+          <div class="flex items-center justify-center h-full text-slate-400">
+            No data available
+          </div>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Match Distribution by Month -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
+      <div class="h-64">
+        <canvas bind:this={chartCanvas}></canvas>
+      </div>
     </div>
   </div>
 </div>
