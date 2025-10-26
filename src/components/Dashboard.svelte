@@ -333,10 +333,10 @@
   let matchDistributionChart: ChartJS | null = null;
 
   $: if (recentMatches.length > 0 && chartCanvas) {
-    // Define all months in 2024-2025 football season (Sep 2024 - Jun 2025)
+    // Define all months in 2024-2025 football season (Sep 2024 - May 2025)
     const seasonMonths = [
       'Sep 2024', 'Oct 2024', 'Nov 2024', 'Dec 2024',
-      'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'
+      'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025'
     ];
 
     // Initialize all months with 0 matches
