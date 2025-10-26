@@ -318,8 +318,8 @@
           labels: apiData.labels,
           datasets: apiData.datasets.map((dataset: any, index: number) => ({
             ...dataset,
-            borderColor: index === 0 ? '#10b981' : index === 1 ? '#f59e0b' : '#ef4444',
-            backgroundColor: index === 0 ? 'rgba(16, 185, 129, 0.1)' : index === 1 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            borderColor: index === 0 ? (chartTheme === 'dark' ? '#10b981' : '#3b82f6') : index === 1 ? '#f59e0b' : '#ef4444',
+            backgroundColor: index === 0 ? (chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)') : index === 1 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
             tension: 0.4,
             fill: index === 2,
             pointRadius: index === 2 ? 4 : 3,
@@ -337,7 +337,7 @@
       return {
         labels: [],
         datasets: [
-          { label: 'Home Goals', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4 },
+          { label: 'Home Goals', data: [], borderColor: chartTheme === 'dark' ? '#10b981' : '#3b82f6', backgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)', tension: 0.4 },
           { label: 'Away Goals', data: [], borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', tension: 0.4 },
           { label: 'Total Goals', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true }
         ]
@@ -359,8 +359,8 @@
         {
           label: 'Home Goals',
           data: homeGoals,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: chartTheme === 'dark' ? '#10b981' : '#3b82f6',
+          backgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)',
           tension: 0.4,
           fill: false,
           pointRadius: 3
@@ -397,8 +397,8 @@
         labels: apiData.labels || [],
         datasets: (apiData.datasets || []).map((dataset: any) => ({
           ...dataset,
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
-          borderColor: '#10b981',
+          backgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.8)',
+          borderColor: chartTheme === 'dark' ? '#10b981' : '#3b82f6',
           borderWidth: 2,
           borderRadius: 8
         }))
@@ -437,8 +437,8 @@
         {
           label: 'Points',
           data: teamStats.map(t => t.points),
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
-          borderColor: '#10b981',
+          backgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.8)',
+          borderColor: chartTheme === 'dark' ? '#10b981' : '#3b82f6',
           borderWidth: 2,
           borderRadius: 8
         }
@@ -451,17 +451,17 @@
     // Use API data if available
     if (useApiData && apiChartData?.team_performance) {
       const apiData = apiChartData.team_performance;
-      const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+      const colors = [chartTheme === 'dark' ? '#10b981' : '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
       return {
         labels: apiData.labels || ['Wins', 'Points/Game', 'Goals/Game', 'Clean Sheets', 'Form'],
         datasets: (apiData.datasets || []).map((dataset: any, index: number) => ({
           ...dataset,
-          borderColor: dataset.borderColor || colors[index] || '#10b981',
-          backgroundColor: dataset.backgroundColor || (colors[index] || '#10b981') + '30',
-          pointBackgroundColor: dataset.borderColor || colors[index] || '#10b981',
+          borderColor: dataset.borderColor || colors[index] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
+          backgroundColor: dataset.backgroundColor || (colors[index] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6')) + '30',
+          pointBackgroundColor: dataset.borderColor || colors[index] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
           pointBorderColor: '#fff',
           pointHoverBackgroundColor: '#fff',
-          pointHoverBorderColor: dataset.borderColor || colors[index] || '#10b981',
+          pointHoverBorderColor: dataset.borderColor || colors[index] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
           borderWidth: 2
         }))
       };
@@ -469,7 +469,7 @@
 
     // Fallback to local computation
     const teams = currentTopTeams.slice(0, 6); // Show top 6 teams for better readability
-    const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+    const colors = [chartTheme === 'dark' ? '#10b981' : '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
     const stats = teams.map(team => {
       const teamMatches = filteredMatches.filter(m =>
@@ -526,12 +526,12 @@
           stats[i].cleanSheets,
           stats[i].form
         ],
-        borderColor: colors[i] || '#10b981',
-        backgroundColor: (colors[i] || '#10b981') + '30',
-        pointBackgroundColor: colors[i] || '#10b981',
+        borderColor: colors[i] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
+        backgroundColor: (colors[i] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6')) + '30',
+        pointBackgroundColor: colors[i] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
         pointBorderColor: '#fff',
         pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: colors[i] || '#10b981',
+        pointHoverBorderColor: colors[i] || (chartTheme === 'dark' ? '#10b981' : '#3b82f6'),
         borderWidth: 2
       }))
     };
@@ -546,8 +546,8 @@
         labels: apiData.labels || ['Home Wins', 'Away Wins', 'Draws'],
         datasets: (apiData.datasets || []).map((dataset: any) => ({
           ...dataset,
-          backgroundColor: dataset.backgroundColor || ['#00ff00', '#ff00ff', '#00ffff'],
-          borderColor: dataset.borderColor || ['#00ff0080', '#ff00ff80', '#00ffff80'],
+          backgroundColor: dataset.backgroundColor || (chartTheme === 'dark' ? ['#10b981', '#8b5cf6', '#06b6d4'] : ['#3b82f6', '#8b5cf6', '#06b6d4']),
+          borderColor: dataset.borderColor || (chartTheme === 'dark' ? ['#10b98180', '#8b5cf680', '#06b6d480'] : ['#3b82f680', '#8b5cf680', '#06b6d480']),
           borderWidth: 2,
           hoverOffset: 4
         }))
@@ -563,8 +563,8 @@
       labels: ['Home Wins', 'Away Wins', 'Draws'],
       datasets: [{
         data: [homeWins, awayWins, draws],
-        backgroundColor: ['#00ff00', '#ff00ff', '#00ffff'],
-        borderColor: ['#00ff0080', '#ff00ff80', '#00ffff80'],
+        backgroundColor: chartTheme === 'dark' ? ['#10b981', '#8b5cf6', '#06b6d4'] : ['#3b82f6', '#8b5cf6', '#06b6d4'],
+        borderColor: chartTheme === 'dark' ? ['#10b98180', '#8b5cf680', '#06b6d480'] : ['#3b82f680', '#8b5cf680', '#06b6d480'],
         borderWidth: 2,
         hoverOffset: 4
       }]
@@ -580,11 +580,11 @@
         labels: apiData.labels || ['0', '1', '2', '3', '4', '5', '6+'],
         datasets: (apiData.datasets || []).map((dataset: any) => ({
           ...dataset,
-          backgroundColor: dataset.backgroundColor || 'rgba(0, 255, 0, 0.6)',
-          borderColor: dataset.borderColor || 'rgba(0, 255, 0, 1)',
+          backgroundColor: dataset.backgroundColor || (chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.6)' : 'rgba(59, 130, 246, 0.6)'),
+          borderColor: dataset.borderColor || (chartTheme === 'dark' ? 'rgba(16, 185, 129, 1)' : 'rgba(59, 130, 246, 1)'),
           borderWidth: 2,
           borderRadius: 8,
-          hoverBackgroundColor: 'rgba(0, 255, 0, 0.8)'
+          hoverBackgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.8)'
         }))
       };
     }
@@ -605,11 +605,11 @@
       datasets: [{
         label: 'Number of Matches',
         data,
-        backgroundColor: 'rgba(0, 255, 0, 0.6)',
-        borderColor: 'rgba(0, 255, 0, 1)',
+        backgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.6)' : 'rgba(59, 130, 246, 0.6)',
+        borderColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 1)' : 'rgba(59, 130, 246, 1)',
         borderWidth: 2,
         borderRadius: 8,
-        hoverBackgroundColor: 'rgba(0, 255, 0, 0.8)'
+        hoverBackgroundColor: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.8)' : 'rgba(59, 130, 246, 0.8)'
       }]
     };
   })();
@@ -696,6 +696,27 @@
           font: {
             family: 'system-ui, -apple-system, sans-serif',
             size: 10
+          }
+        }
+      }
+    }
+  } as ChartOptions<any>;
+
+  // Doughnut chart options with custom tooltip for Results Distribution
+  $: doughnutOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      tooltip: {
+        ...chartOptions.plugins?.tooltip,
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const dataset = context.dataset;
+            const total = dataset.data.reduce((acc: number, val: number) => acc + val, 0);
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+            return `${value}/${total} ${label.toLowerCase()} (${percentage}%)`;
           }
         }
       }
@@ -904,7 +925,7 @@
         </button>
       </div>
       <div class="h-48 sm:h-64">
-        <Doughnut data={resultsDistributionData} options={chartOptions} />
+        <Doughnut data={resultsDistributionData} options={doughnutOptions} />
       </div>
     </div>
 

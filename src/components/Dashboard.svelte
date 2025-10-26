@@ -27,7 +27,7 @@
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
-  import { TrendingUp, Users, Target, Zap } from 'lucide-svelte';
+  import { TrendingUp, Users, Target, Zap, Shield } from 'lucide-svelte';
   import { supabase, hasValidSupabaseConfig, getRecentMatches } from '../lib/supabase';
   import { apiService } from '../services/apiService';
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
@@ -61,8 +61,8 @@
   let averageGoals = tweened(0, { duration: 1200, easing: cubicOut });
 
   // Statistics
-  let homeWinPercentage = 0;
-  let mostCommonScore = '0-0';
+  let bestDefenseTeam = '';
+  let bestDefenseGoalsConceded = 0;
   let topScoringTeam = '';
   let totalTeams = 0;
   let highestScoringMatch = { goals: 0, score: '0-0', homeTeam: '', awayTeam: '', date: '' };
@@ -101,7 +101,6 @@
         totalMatches.set(dashboardData.stats.total_matches);
         totalGoals.set(dashboardData.stats.total_goals);
         averageGoals.set(dashboardData.stats.avg_goals_per_match);
-        homeWinPercentage = dashboardData.stats.home_win_percentage;
         totalTeams = dashboardData.stats.total_teams;
 
         // Set matches for visualizations
@@ -140,6 +139,30 @@
             awayTeam: highestMatchAwayTeam,
             date: highestMatchDate
           };
+
+          // Calculate best defense (team with fewest goals conceded)
+          const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
+          dashboardData.recent_matches.forEach(m => {
+            const homeTeam = m.home_team;
+            const awayTeam = m.away_team;
+
+            if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+            if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+            teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+            teamDefenseStats[homeTeam].matches += 1;
+            teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+            teamDefenseStats[awayTeam].matches += 1;
+          });
+
+          let minGoalsConceded = Infinity;
+          Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+            if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+              minGoalsConceded = stats.conceded;
+              bestDefenseTeam = team;
+              bestDefenseGoalsConceded = stats.conceded;
+            }
+          });
         }
 
         console.log('Dashboard loaded from API:', {
@@ -229,24 +252,27 @@
     const avgGoals = validMatches.length > 0 ? sampleGoals / validMatches.length : 0;
     averageGoals.set(avgGoals);
 
-    // Home win percentage from European data
-    const homeWins = validMatches.filter(m => m.result === 'H').length;
-    homeWinPercentage = validMatches.length > 0
-      ? (homeWins / validMatches.length) * 100
-      : 0;
-
-    // Most common score from European leagues
-    const scoreMap = new Map<string, number>();
+    // Calculate best defense (team with fewest goals conceded)
+    const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
     validMatches.forEach(m => {
-      const score = `${m.home_score}-${m.away_score}`;
-      scoreMap.set(score, (scoreMap.get(score) || 0) + 1);
+      const homeTeam = m.home_team;
+      const awayTeam = m.away_team;
+
+      if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+      if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+      teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+      teamDefenseStats[homeTeam].matches += 1;
+      teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+      teamDefenseStats[awayTeam].matches += 1;
     });
 
-    let maxCount = 0;
-    scoreMap.forEach((count, score) => {
-      if (count > maxCount) {
-        maxCount = count;
-        mostCommonScore = score;
+    let minGoalsConceded = Infinity;
+    Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+      if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+        minGoalsConceded = stats.conceded;
+        bestDefenseTeam = team;
+        bestDefenseGoalsConceded = stats.conceded;
       }
     });
 
@@ -338,7 +364,6 @@
       totalMatches.set(freshData.stats.total_matches);
       totalGoals.set(freshData.stats.total_goals);
       averageGoals.set(freshData.stats.avg_goals_per_match);
-      homeWinPercentage = freshData.stats.home_win_percentage;
       totalTeams = freshData.stats.total_teams;
 
       // Update goalsChart with new league data
@@ -371,6 +396,30 @@
         awayTeam: highestMatchAwayTeam,
         date: highestMatchDate
       };
+
+      // Recalculate best defense for the selected league
+      const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
+      freshData.recent_matches.forEach(m => {
+        const homeTeam = m.home_team;
+        const awayTeam = m.away_team;
+
+        if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+        if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+        teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+        teamDefenseStats[homeTeam].matches += 1;
+        teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+        teamDefenseStats[awayTeam].matches += 1;
+      });
+
+      let minGoalsConceded = Infinity;
+      Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+        if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+          minGoalsConceded = stats.conceded;
+          bestDefenseTeam = team;
+          bestDefenseGoalsConceded = stats.conceded;
+        }
+      });
 
       console.log('Dashboard refreshed with league data:', {
         league: league || 'all',
@@ -524,11 +573,11 @@
     </div>
   </div>
 
-  <!-- How We Analyse -->
+  <!-- How This Was All Put Together -->
   <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
     <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
       <Target class="w-5 h-5 text-blue-600 dark:text-green-500" />
-      How We Analyse
+      How This Was All Put Together
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -536,28 +585,28 @@
           <Zap class="w-5 h-5 text-blue-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">RAG System</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL using OpenAI API with GPT-4, custom backend APIs using FastAPI with Python scripts</p>
       </div>
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
         <div class="w-10 h-10 bg-indigo-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
           <TrendingUp class="w-5 h-5 text-indigo-600 dark:text-green-600" />
         </div>
-        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
+        <h4 class="font-semibold text-sm mb-1">Data Source</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Supabase Vector Embeddings, custom database configurations created using open source data from football-data.co.uk</p>
       </div>
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
         <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
           <Users class="w-5 h-5 text-purple-600" />
         </div>
-        <h4 class="font-semibold text-sm mb-1">Vector Embeddings</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Semantic database search</p>
+        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Using smart Python visualisations and charts (Chart.js, Plotly, Matplotlib)</p>
       </div>
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
         <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
           <Target class="w-5 h-5 text-amber-600" />
         </div>
-        <h4 class="font-semibold text-sm mb-1">Statistical Analysis</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Historical trend analysis</p>
+        <h4 class="font-semibold text-sm mb-1">Tech Stack</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">React, Svelte, Docker, Supabase, Render, Node.js</p>
       </div>
     </div>
   </div>
@@ -636,18 +685,18 @@
 
       <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
         <div class="flex items-start justify-between mb-2 sm:mb-4">
-          <div class="bg-sky-500/10 dark:bg-sky-500/20 p-2 sm:p-3 rounded-lg">
-            <Users class="w-4 h-4 sm:w-6 sm:h-6 text-sky-600 dark:text-sky-400" />
+          <div class="bg-purple-500/10 dark:bg-purple-500/20 p-2 sm:p-3 rounded-lg">
+            <Shield class="w-4 h-4 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
           </div>
         </div>
         <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-          Home Win %
+          Best Defense
         </div>
         <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
-          {homeWinPercentage.toFixed(1)}%
+          {bestDefenseTeam || 'N/A'}
         </div>
         <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
-          {mostCommonScore} most common
+          {bestDefenseGoalsConceded} goals conceded
         </div>
       </div>
 
