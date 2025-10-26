@@ -75,7 +75,11 @@
     { value: 'SP1', label: 'La Liga', icon: '🇪🇸' },
     { value: 'D1', label: 'Bundesliga', icon: '🇩🇪' },
     { value: 'I1', label: 'Serie A', icon: '🇮🇹' },
-    { value: 'F1', label: 'Ligue 1', icon: '🇫🇷' }
+    { value: 'F1', label: 'Ligue 1', icon: '🇫🇷' },
+    { value: 'N1', label: 'Eredivisie', icon: '🇳🇱' },
+    { value: 'P1', label: 'Primeira Liga', icon: '🇵🇹' },
+    { value: 'SC0', label: 'Scottish Premiership', icon: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+    { value: 'E1', label: 'Championship', icon: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' }
   ];
 
   // League-specific top teams (based on typical strong performers)
@@ -84,7 +88,11 @@
     'SP1': ['Real Madrid', 'Barcelona', 'Atletico Madrid', 'Real Sociedad', 'Betis', 'Villarreal', 'Athletic Club', 'Valencia'],
     'D1': ['Bayern Munich', 'Dortmund', 'RB Leipzig', 'Union Berlin', 'Eintracht Frankfurt', 'Bayer Leverkusen', 'Freiburg', 'Wolfsburg'],
     'I1': ['Inter', 'Juventus', 'AC Milan', 'Napoli', 'Roma', 'Lazio', 'Atalanta', 'Fiorentina'],
-    'F1': ['PSG', 'Marseille', 'Monaco', 'Lyon', 'Lille', 'Rennes', 'Nice', 'Lens']
+    'F1': ['PSG', 'Marseille', 'Monaco', 'Lyon', 'Lille', 'Rennes', 'Nice', 'Lens'],
+    'N1': ['PSV', 'Ajax', 'Feyenoord', 'AZ Alkmaar', 'Twente', 'Utrecht', 'Go Ahead Eagles', 'Heerenveen'],
+    'P1': ['Benfica', 'Porto', 'Sporting CP', 'Braga', 'Vitoria Guimaraes', 'Moreirense', 'Famalicao', 'Casa Pia'],
+    'SC0': ['Celtic', 'Rangers', 'Hearts', 'Aberdeen', 'Hibernian', 'Motherwell', 'Dundee Utd', 'Kilmarnock'],
+    'E1': ['Leicester', 'Leeds', 'Southampton', 'Burnley', 'Sheffield Utd', 'Norwich', 'Middlesbrough', 'West Brom']
   };
 
   // Filter matches based on league with loading state
@@ -336,12 +344,10 @@
       };
     }
 
-    const labels = recentMatches.map(m => {
-      try {
-        return format(new Date(m.match_date), 'MMM dd');
-      } catch (e) {
-        return 'Invalid Date';
-      }
+    // Convert to gameweek labels (every 10 games = 1 gameweek)
+    const labels = recentMatches.map((m, idx) => {
+      const gameweek = Math.floor(idx / 10) + 1;
+      return `GW${gameweek}`;
     });
     const homeGoals = recentMatches.map(m => m.home_score || 0);
     const awayGoals = recentMatches.map(m => m.away_score || 0);
@@ -447,7 +453,7 @@
       const apiData = apiChartData.team_performance;
       const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
       return {
-        labels: apiData.labels || ['Wins', 'Points/Game', 'Goals/Game', 'Defense', 'Form'],
+        labels: apiData.labels || ['Wins', 'Points/Game', 'Goals/Game', 'Clean Sheets', 'Form'],
         datasets: (apiData.datasets || []).map((dataset: any, index: number) => ({
           ...dataset,
           borderColor: dataset.borderColor || colors[index] || '#10b981',
@@ -493,24 +499,31 @@
       const matchesPlayed = teamMatches.length;
       const goalDifference = goals - goalsAgainst;
 
+      // Calculate clean sheets (matches where team conceded 0 goals)
+      const cleanSheets = teamMatches.filter(m => {
+        if (m.home_team === team) return (m.away_score || 0) === 0;
+        if (m.away_team === team) return (m.home_score || 0) === 0;
+        return false;
+      }).length;
+
       return {
         wins: wins * 2, // Scale for visualization
         points: points / Math.max(matchesPlayed, 1) * 10, // Points per game * 10
         goals: goals / Math.max(matchesPlayed, 1) * 15, // Goals per game * 15
-        defense: Math.max(0, (20 - (goalsAgainst / Math.max(matchesPlayed, 1) * 10))), // Defensive rating
+        cleanSheets: cleanSheets * 2, // Clean sheets scaled for visualization
         form: goalDifference > 0 ? Math.min(goalDifference * 2, 20) : 0 // Goal difference scaled
       };
     });
 
     return {
-      labels: ['Wins', 'Points/Game', 'Goals/Game', 'Defense', 'Form'],
+      labels: ['Wins', 'Points/Game', 'Goals/Game', 'Clean Sheets', 'Form'],
       datasets: teams.map((team, i) => ({
         label: team,
         data: [
           stats[i].wins,
           stats[i].points,
           stats[i].goals,
-          stats[i].defense,
+          stats[i].cleanSheets,
           stats[i].form
         ],
         borderColor: colors[i] || '#10b981',
@@ -835,10 +848,10 @@
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
         <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goal Trends</h3>
       </div>
       <button
-        on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
+        on:click={() => handleQueryClick('goals_trend', 'Goal Trends')}
         class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
         title="Generate SQL query for this chart"
       >

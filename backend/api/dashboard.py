@@ -202,23 +202,16 @@ async def get_chart_data(
         chart_data = None
 
         if chart_type == "goals_trend":
-            # Calculate goals per match over time
+            # Calculate goals per match over time with gameweek labels
             dates = []
             home_goals = []
             away_goals = []
             total_goals = []
 
-            for match in matches[:380]:  # Full season of matches to show complete timeline
-                # Format date as "Mon DD" for better display
-                match_date = match.get('match_date', '')
-                if match_date:
-                    try:
-                        dt = datetime.fromisoformat(str(match_date).replace('Z', '+00:00'))
-                        formatted_date = dt.strftime('%b %d')
-                    except:
-                        formatted_date = str(match_date)[:10]  # Fallback to YYYY-MM-DD
-                else:
-                    formatted_date = ''
+            for idx, match in enumerate(matches[:380]):  # Full season of matches to show complete timeline
+                # Convert to gameweek format (every 10 games = 1 gameweek)
+                gameweek = (idx // 10) + 1
+                formatted_date = f'GW{gameweek}'
 
                 dates.append(formatted_date)
                 home_goals.append(match.get('home_score', 0) or 0)

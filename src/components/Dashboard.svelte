@@ -65,7 +65,7 @@
   let mostCommonScore = '0-0';
   let topScoringTeam = '';
   let totalTeams = 0;
-  let highestScoringMatch = { goals: 0, score: '0-0' };
+  let highestScoringMatch = { goals: 0, score: '0-0', homeTeam: '', awayTeam: '', date: '' };
 
   let goalsChart: ChartData<"line", number[], string> = {
     labels: [],
@@ -120,14 +120,26 @@
           // Calculate highest scoring match
           let highestMatchGoals = 0;
           let highestMatchScore = '0-0';
+          let highestMatchHomeTeam = '';
+          let highestMatchAwayTeam = '';
+          let highestMatchDate = '';
           dashboardData.recent_matches.forEach(m => {
             const totalGoals = (m.home_score || 0) + (m.away_score || 0);
             if (totalGoals > highestMatchGoals) {
               highestMatchGoals = totalGoals;
               highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+              highestMatchHomeTeam = m.home_team || '';
+              highestMatchAwayTeam = m.away_team || '';
+              highestMatchDate = m.match_date || '';
             }
           });
-          highestScoringMatch = { goals: highestMatchGoals, score: highestMatchScore };
+          highestScoringMatch = {
+            goals: highestMatchGoals,
+            score: highestMatchScore,
+            homeTeam: highestMatchHomeTeam,
+            awayTeam: highestMatchAwayTeam,
+            date: highestMatchDate
+          };
         }
 
         console.log('Dashboard loaded from API:', {
@@ -241,14 +253,26 @@
     // Calculate highest scoring match
     let highestMatchGoals = 0;
     let highestMatchScore = '0-0';
+    let highestMatchHomeTeam = '';
+    let highestMatchAwayTeam = '';
+    let highestMatchDate = '';
     validMatches.forEach(m => {
       const totalGoals = (m.home_score || 0) + (m.away_score || 0);
       if (totalGoals > highestMatchGoals) {
         highestMatchGoals = totalGoals;
         highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+        highestMatchHomeTeam = m.home_team || '';
+        highestMatchAwayTeam = m.away_team || '';
+        highestMatchDate = m.match_date || '';
       }
     });
-    highestScoringMatch = { goals: highestMatchGoals, score: highestMatchScore };
+    highestScoringMatch = {
+      goals: highestMatchGoals,
+      score: highestMatchScore,
+      homeTeam: highestMatchHomeTeam,
+      awayTeam: highestMatchAwayTeam,
+      date: highestMatchDate
+    };
 
     // Count unique teams (should be close to 397 from European leagues)
     const teams = new Set<string>();
@@ -527,8 +551,7 @@
         </div>
       {/if}
 
-      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
-        <img src="/sqlballlogo.svg" alt="SQL Ball Logo" class="w-8 h-8" />
+      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6">
         European League Analytics
       </h2>
       <EnhancedVisualizations
@@ -619,6 +642,16 @@
         <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
           {highestScoringMatch.score}
         </div>
+        {#if highestScoringMatch.homeTeam && highestScoringMatch.awayTeam}
+          <div class="text-xs text-slate-600 dark:text-slate-400 mt-2 font-medium">
+            {highestScoringMatch.homeTeam} vs {highestScoringMatch.awayTeam}
+          </div>
+        {/if}
+        {#if highestScoringMatch.date}
+          <div class="text-xs text-slate-500 dark:text-slate-500 mt-1">
+            {format(new Date(highestScoringMatch.date), 'MMM d, yyyy')}
+          </div>
+        {/if}
       </div>
     </div>
   {/if}
