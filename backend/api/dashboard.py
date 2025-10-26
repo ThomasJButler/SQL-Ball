@@ -86,11 +86,15 @@ async def get_dashboard_matches(
         # Build query
         query = supabase.from_('matches').select('*')
 
+        # Filter by current season to get full season data (Sep 2024 - Jun 2025)
+        query = query.eq('season', '2024-2025')
+
         if league:
             query = query.eq('div', league)
 
-        # Fetch data
-        response = query.order('match_date', desc=True).limit(limit).execute()
+        # Fetch data ordered by oldest first to ensure full season coverage
+        # (instead of just most recent matches)
+        response = query.order('match_date', desc=False).limit(limit).execute()
 
         if response.data:
             # Cache the result
