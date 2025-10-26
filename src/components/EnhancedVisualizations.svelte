@@ -45,7 +45,7 @@
   );
 
   export let matches: Match[] = [];
-  export let selectedDateRange: string = 'all';
+  export let selectedDateRange: string = 'E0'; // Default to Premier League
   export let selectedSeason: string = '2024-2025';
   // Optional pre-computed chart data from API
   export let apiChartData: Record<string, any> | null = null;
@@ -830,15 +830,15 @@
     </div>
   </div>
 
-  <!-- Team Performance Radar - Full Width -->
+  <!-- Goals Trend - Full Width for better visualization -->
   <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
-        <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
+        <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
       </div>
       <button
-        on:click={() => handleQueryClick('team_performance', 'Team Performance')}
+        on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
         class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
         title="Generate SQL query for this chart"
       >
@@ -847,7 +847,7 @@
       </button>
     </div>
     <div class="h-64 sm:h-80">
-      <Radar data={teamPerformanceData} options={radarOptions} />
+      <Line data={goalsOverTimeData} options={chartOptions} />
     </div>
   </div>
 
@@ -916,15 +916,15 @@
       </div>
     </div>
 
-    <!-- Goals Over Time - Now with more space! -->
+    <!-- Team Performance Radar -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
+          <img src="/sqlballlogo.svg" alt="SQL Ball Logo" class="w-4 h-4 sm:w-5 sm:h-5" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
         </div>
         <button
-          on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
+          on:click={() => handleQueryClick('team_performance', 'Team Performance')}
           class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
           title="Generate SQL query for this chart"
         >
@@ -933,7 +933,7 @@
         </button>
       </div>
       <div class="h-48 sm:h-64">
-        <Line data={goalsOverTimeData} options={chartOptions} />
+        <Radar data={teamPerformanceData} options={radarOptions} />
       </div>
     </div>
   </div>

@@ -94,8 +94,8 @@
       if (backendAvailable) {
         console.log('Using backend API for optimized data fetching...');
 
-        // Fetch complete dashboard data from backend API
-        const dashboardData = await apiService.getDashboardData();
+        // Fetch complete dashboard data from backend API (default to Premier League)
+        const dashboardData = await apiService.getDashboardData('E0');
 
         // Update statistics from API response
         totalMatches.set(dashboardData.stats.total_matches);
