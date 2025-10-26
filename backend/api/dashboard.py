@@ -204,8 +204,19 @@ async def get_chart_data(
             away_goals = []
             total_goals = []
 
-            for match in matches[:50]:  # Last 50 matches for trend
-                dates.append(match.get('match_date', ''))
+            for match in matches[:30]:  # Last 30 matches for better chart readability
+                # Format date as "Mon DD" for better display
+                match_date = match.get('match_date', '')
+                if match_date:
+                    try:
+                        dt = datetime.fromisoformat(str(match_date).replace('Z', '+00:00'))
+                        formatted_date = dt.strftime('%b %d')
+                    except:
+                        formatted_date = str(match_date)[:10]  # Fallback to YYYY-MM-DD
+                else:
+                    formatted_date = ''
+
+                dates.append(formatted_date)
                 home_goals.append(match.get('home_score', 0) or 0)
                 away_goals.append(match.get('away_score', 0) or 0)
                 total_goals.append((match.get('home_score', 0) or 0) + (match.get('away_score', 0) or 0))

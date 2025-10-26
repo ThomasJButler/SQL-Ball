@@ -15,6 +15,8 @@
     Legend,
     LineElement,
     LineController,
+    BarElement,
+    BarController,
     LinearScale,
     CategoryScale,
     PointElement,
@@ -38,6 +40,8 @@
     PointElement,
     LineElement,
     LineController,
+    BarElement,
+    BarController,
     Title,
     Tooltip,
     Legend,
@@ -77,41 +81,6 @@
 
   let chartCanvas: HTMLCanvasElement;
 
-  $: stats = [
-    {
-      title: 'European Matches',
-      value: $totalMatches.toFixed(0),
-      change: `${totalTeams} teams, 22 leagues`,
-      icon: Target,
-      color: 'text-green-500 dark:text-green-400',
-      bgColor: 'bg-green-500/10 dark:bg-green-500/20'
-    },
-    {
-      title: 'Total Goals',
-      value: $totalGoals.toFixed(0),
-      change: `${$averageGoals.toFixed(1)} per match`,
-      icon: TrendingUp,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20'
-    },
-    {
-      title: 'Home Win %',
-      value: `${homeWinPercentage.toFixed(1)}%`,
-      change: mostCommonScore ? `${mostCommonScore} most common` : 'Calculating...',
-      icon: Users,
-      color: 'text-sky-600 dark:text-sky-400',
-      bgColor: 'bg-sky-500/10 dark:bg-sky-500/20'
-    },
-    {
-      title: 'Queries Run',
-      value: $queriesExecuted.toFixed(0),
-      change: 'Today',
-      icon: BarChart2,
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-500/10 dark:bg-amber-500/20'
-    }
-  ];
-
   async function loadDashboardData() {
     try {
       loading = true;
@@ -133,6 +102,7 @@
         totalGoals.set(dashboardData.stats.total_goals);
         averageGoals.set(dashboardData.stats.avg_goals_per_match);
         homeWinPercentage = dashboardData.stats.home_win_percentage;
+        totalTeams = dashboardData.stats.total_teams;
 
         // Set matches for visualizations
         recentMatches = dashboardData.recent_matches;
@@ -317,6 +287,7 @@
       totalGoals.set(freshData.stats.total_goals);
       averageGoals.set(freshData.stats.avg_goals_per_match);
       homeWinPercentage = freshData.stats.home_win_percentage;
+      totalTeams = freshData.stats.total_teams;
 
       console.log('Dashboard refreshed with league data:', {
         league: league || 'all',
@@ -342,57 +313,93 @@
     }
   }
 
-  onMount(() => {
-    loadDashboardData();
+  // Reactive computation for match distribution by month
+  let matchDistributionChart: ChartJS | null = null;
 
-    // Initialize patterns chart
-    if (chartCanvas) {
-      const ctx = chartCanvas.getContext('2d');
-      if (ctx) {
-        new ChartJS(ctx, {
-          type: 'line',
-          data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [{
-              label: 'Matches Analyzed',
-              data: [12, 18, 25, 30],
+  $: if (recentMatches.length > 0 && chartCanvas) {
+    // Group matches by month
+    const monthCounts: Record<string, number> = {};
+
+    recentMatches.forEach(match => {
+      if (match.match_date) {
+        const monthKey = format(new Date(match.match_date), 'MMM yyyy');
+        monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+      }
+    });
+
+    // Sort months chronologically
+    const sortedMonths = Object.entries(monthCounts)
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+      .slice(-12); // Last 12 months
+
+    const labels = sortedMonths.map(([month]) => month);
+    const data = sortedMonths.map(([_, count]) => count);
+
+    // Update or create chart
+    const ctx = chartCanvas.getContext('2d');
+    if (ctx) {
+      if (matchDistributionChart) {
+        matchDistributionChart.destroy();
+      }
+
+      matchDistributionChart = new ChartJS(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Matches Played',
+            data,
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+            borderColor: '#10b981',
+            borderWidth: 2,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              padding: 12,
+              titleColor: '#10b981',
+              bodyColor: '#fff',
               borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              tension: 0.4,
-              fill: true,
-            }]
+              borderWidth: 1,
+            }
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(156, 163, 175, 0.1)'
+              },
+              ticks: {
+                color: 'rgb(156, 163, 175)',
+                precision: 0
               }
             },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(156, 163, 175, 0.1)'
-                },
-                ticks: {
-                  color: 'rgb(156, 163, 175)'
-                }
+            x: {
+              grid: {
+                display: false
               },
-              x: {
-                grid: {
-                  display: false
-                },
-                ticks: {
-                  color: 'rgb(156, 163, 175)'
-                }
+              ticks: {
+                color: 'rgb(156, 163, 175)',
+                maxRotation: 45,
+                minRotation: 45
               }
             }
           }
-        });
-      }
+        }
+      });
     }
+  }
+
+  onMount(() => {
+    loadDashboardData();
   });
 </script>
 
@@ -411,35 +418,53 @@
         <div class="flex-1">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-3 h-3 bg-green-400 rounded-full live-pulse"></div>
-            <span class="text-green-200 text-sm font-semibold tracking-wide uppercase">LIVE ANALYTICS</span>
+            <span class="text-green-200 text-sm font-semibold tracking-wide uppercase">2024-2025 SEASON</span>
           </div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">
             SQL-Ball Analytics
           </h1>
           <p class="text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
-            RAG-powered European football analytics across 22 leagues, 11 countries, 7,681+ matches
+            RAG-powered European football analytics from the 2024-2025 season across 22 leagues, 11 countries, 7,681+ matches
           </p>
-
-          <!-- Quick stats -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{$averageGoals.toFixed(1)}</div>
-              <div class="text-xs text-green-200">Avg Goals</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{homeWinPercentage.toFixed(1)}%</div>
-              <div class="text-xs text-green-200">Home Wins</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{mostCommonScore}</div>
-              <div class="text-xs text-green-200">Common Score</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">22</div>
-              <div class="text-xs text-green-200">Leagues</div>
-            </div>
-          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- How We Analyse -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+      <Target class="w-5 h-5 text-green-500" />
+      How We Analyse
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <BarChart2 class="w-5 h-5 text-blue-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">RAG System</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-green-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Users class="w-5 h-5 text-purple-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Vector Embeddings</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Semantic database search</p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Target class="w-5 h-5 text-amber-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Statistical Analysis</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Historical trend analysis</p>
       </div>
     </div>
   </div>
@@ -470,47 +495,86 @@
     </div>
   {/if}
 
-  <!-- Stats Grid -->
-  {#if loading}
+  <!-- Stats Grid - Accurate Real-Time Data -->
+  {#if !loading && recentMatches.length > 0}
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {#each Array(4) as _}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg">
-          <div class="animate-pulse">
-            <div class="w-8 h-8 sm:w-12 sm:h-12 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2 sm:mb-3"></div>
-            <div class="h-3 sm:h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 sm:w-24 mb-1 sm:mb-2"></div>
-            <div class="h-6 sm:h-8 bg-slate-200 dark:bg-slate-700 rounded w-20 sm:w-32 mb-1 sm:mb-2"></div>
-            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-12 sm:w-20"></div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-green-500/10 dark:bg-green-500/20 p-2 sm:p-3 rounded-lg">
+            <Target class="w-4 h-4 sm:w-6 sm:h-6 text-green-500 dark:text-green-400" />
           </div>
         </div>
-      {/each}
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Total Matches
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {$totalMatches.toFixed(0)}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {totalTeams} teams, {useApiData ? 'live data' : 'cached'}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-emerald-500/10 dark:bg-emerald-500/20 p-2 sm:p-3 rounded-lg">
+            <TrendingUp class="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Total Goals
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {$totalGoals.toFixed(0)}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {$averageGoals.toFixed(2)} per match
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-sky-500/10 dark:bg-sky-500/20 p-2 sm:p-3 rounded-lg">
+            <Users class="w-4 h-4 sm:w-6 sm:h-6 text-sky-600 dark:text-sky-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Home Win %
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {homeWinPercentage.toFixed(1)}%
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {mostCommonScore} most common
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-amber-500/10 dark:bg-amber-500/20 p-2 sm:p-3 rounded-lg">
+            <BarChart2 class="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Queries Run
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {$queriesExecuted.toFixed(0)}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          Today
+        </div>
+      </div>
     </div>
-  {:else if error}
+  {/if}
+
+  <!-- Error Display -->
+  {#if error && !loading}
     <div class="p-8 text-center bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
       <p class="text-red-600 dark:text-red-400">{error}</p>
       <button on:click={loadDashboardData} class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
         Retry
       </button>
-    </div>
-  {:else}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {#each stats as stat, i}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div class="flex items-start justify-between mb-2 sm:mb-4">
-            <div class="{stat.bgColor} p-2 sm:p-3 rounded-lg">
-              <svelte:component this={stat.icon} class="w-4 h-4 sm:w-6 sm:h-6 {stat.color}" />
-            </div>
-          </div>
-          <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-            {stat.title}
-          </div>
-          <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
-            {stat.value}
-          </div>
-          <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
-            {stat.change}
-          </div>
-        </div>
-      {/each}
     </div>
   {/if}
 
@@ -530,47 +594,9 @@
     </div>
 
     <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Analysis Progress</h3>
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
       <div class="h-64">
         <canvas bind:this={chartCanvas}></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- How We Analyze -->
-  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-      <Target class="w-5 h-5 text-green-500" />
-      How We Analyze
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <BarChart2 class="w-5 h-5 text-blue-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">RAG System</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <TrendingUp class="w-5 h-5 text-green-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <Users class="w-5 h-5 text-purple-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Vector Embeddings</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Semantic database search</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <Target class="w-5 h-5 text-amber-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Statistical Analysis</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Historical trend analysis</p>
       </div>
     </div>
   </div>

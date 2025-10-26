@@ -736,32 +736,6 @@
       <Radar data={teamPerformanceData} options={radarOptions} />
     </div>
   </div>
-
-  <!-- Stats Summary -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
-    <div class="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl p-3 sm:p-4 border border-green-500/20">
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">Total Matches</p>
-      <p class="text-lg sm:text-2xl font-bold text-green-600 dark:text-green-400 font-mono">{filteredMatches.length}</p>
-    </div>
-    <div class="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl p-3 sm:p-4 border border-blue-500/20">
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">Avg Goals/Match</p>
-      <p class="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-        {(filteredMatches.reduce((sum, m) => sum + (m.home_score || 0) + (m.away_score || 0), 0) / Math.max(filteredMatches.length, 1)).toFixed(1)}
-      </p>
-    </div>
-    <div class="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl p-3 sm:p-4 border border-purple-500/20">
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">Home Win %</p>
-      <p class="text-lg sm:text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">
-        {((filteredMatches.filter(m => m.result === 'H').length / Math.max(filteredMatches.length, 1)) * 100).toFixed(0)}%
-      </p>
-    </div>
-    <div class="bg-gradient-to-br from-amber-500/10 to-amber-600/10 rounded-xl p-3 sm:p-4 border border-amber-500/20">
-      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-1">High Scoring</p>
-      <p class="text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">
-        {filteredMatches.filter(m => (m.home_score || 0) + (m.away_score || 0) >= 4).length}
-      </p>
-    </div>
-  </div>
 </div>
 
 <style>
