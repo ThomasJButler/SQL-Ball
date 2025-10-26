@@ -206,7 +206,7 @@
 
       // Execute the SQL
       const results = await apiService.executeSQL(queryResponse.sql);
-      queryModalData.results = results.results || [];
+      queryModalData.results = results || [];
 
       // Generate key insights based on results
       const insights = generateInsights(chartType, queryModalData.results);

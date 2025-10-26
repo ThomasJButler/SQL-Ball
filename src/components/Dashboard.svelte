@@ -579,25 +579,10 @@
   {/if}
 
   <!-- Charts -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Goals Trend</h3>
-      <div class="h-64">
-        {#if !loading && goalsChart.labels && goalsChart.labels.length > 0}
-          <Line data={goalsChart} options={{ responsive: true, maintainAspectRatio: false }} />
-        {:else}
-          <div class="flex items-center justify-center h-full text-slate-400">
-            No data available
-          </div>
-        {/if}
-      </div>
-    </div>
-
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
-      <div class="h-64">
-        <canvas bind:this={chartCanvas}></canvas>
-      </div>
+  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg max-w-4xl mx-auto">
+    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
+    <div class="h-64">
+      <canvas bind:this={chartCanvas}></canvas>
     </div>
   </div>
 </div>
