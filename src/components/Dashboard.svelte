@@ -498,7 +498,7 @@
 
 <div class="space-y-8">
   <!-- Hero Section -->
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 p-8 text-white">
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-green-600 dark:via-emerald-600 dark:to-teal-600 p-8 text-white">
     <!-- Animated background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full animate-float"></div>
@@ -510,13 +510,13 @@
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-3 h-3 bg-green-400 rounded-full live-pulse"></div>
-            <span class="text-green-200 text-sm font-semibold tracking-wide uppercase">2024-2025 SEASON</span>
+            <div class="w-3 h-3 bg-purple-300 dark:bg-green-400 rounded-full live-pulse"></div>
+            <span class="text-purple-100 dark:text-green-200 text-sm font-semibold tracking-wide uppercase">2024-2025 SEASON</span>
           </div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">
             SQL-Ball Analytics
           </h1>
-          <p class="text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
+          <p class="text-purple-100 dark:text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
             RAG-powered European football analytics from the 2024-2025 season across 22 leagues, 11 countries, 7,681+ matches
           </p>
         </div>
@@ -527,7 +527,7 @@
   <!-- How We Analyse -->
   <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
     <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-      <Target class="w-5 h-5 text-green-500" />
+      <Target class="w-5 h-5 text-blue-600 dark:text-green-500" />
       How We Analyse
     </h3>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -539,8 +539,8 @@
         <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
       </div>
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <TrendingUp class="w-5 h-5 text-green-600" />
+        <div class="w-10 h-10 bg-indigo-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-indigo-600 dark:text-green-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
         <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
@@ -568,14 +568,14 @@
       <!-- Loading overlay for chart refresh -->
       {#if isRefreshingCharts}
         <div class="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center transition-opacity duration-300">
-          <div class="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-lg border border-slate-200 dark:border-green-500/20 shadow-lg">
-            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-lg border border-blue-200 dark:border-green-500/20 shadow-lg">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-green-500"></div>
             <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Updating charts...</span>
           </div>
         </div>
       {/if}
 
-      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6">
+      <h2 class="text-2xl font-bold text-indigo-900 dark:text-green-400 mb-6">
         European League Analytics
       </h2>
       <EnhancedVisualizations
@@ -602,8 +602,8 @@
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
         <div class="flex items-start justify-between mb-2 sm:mb-4">
-          <div class="bg-green-500/10 dark:bg-green-500/20 p-2 sm:p-3 rounded-lg">
-            <Target class="w-4 h-4 sm:w-6 sm:h-6 text-green-500 dark:text-green-400" />
+          <div class="bg-blue-500/10 dark:bg-green-500/20 p-2 sm:p-3 rounded-lg">
+            <Target class="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-green-500" />
           </div>
         </div>
         <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
@@ -619,8 +619,8 @@
 
       <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
         <div class="flex items-start justify-between mb-2 sm:mb-4">
-          <div class="bg-emerald-500/10 dark:bg-emerald-500/20 p-2 sm:p-3 rounded-lg">
-            <TrendingUp class="w-4 h-4 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
+          <div class="bg-indigo-500/10 dark:bg-emerald-500/20 p-2 sm:p-3 rounded-lg">
+            <TrendingUp class="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600 dark:text-emerald-400" />
           </div>
         </div>
         <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">

@@ -815,7 +815,7 @@
   {#if isLoading}
     <div class="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center transition-opacity duration-300">
       <div class="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-lg border border-slate-200 dark:border-green-500/20 shadow-lg">
-        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+        <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-green-500"></div>
         <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Loading analytics...</span>
       </div>
     </div>
@@ -823,7 +823,7 @@
 
   <!-- Simplified Date Range Selector -->
   <div class="flex flex-wrap items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-green-500/20">
-    <Calendar class="w-5 h-5 text-green-500" />
+    <Calendar class="w-5 h-5 text-blue-600 dark:text-green-500" />
     <span class="text-sm font-semibold text-slate-600 dark:text-slate-400">View Data:</span>
     <div class="flex flex-wrap gap-2">
       {#each dateRanges as range}
@@ -832,7 +832,7 @@
           disabled={isLoading}
           class="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all {
             selectedDateRange === range.value
-              ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
+              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-green-500 dark:to-emerald-500 text-white shadow-lg'
               : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
           } {isLoading ? 'opacity-50 cursor-not-allowed' : ''}"
         >
@@ -847,12 +847,12 @@
   <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
-        <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+        <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-green-500" />
         <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goal Trends</h3>
       </div>
       <button
         on:click={() => handleQueryClick('goals_trend', 'Goal Trends')}
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
         title="Generate SQL query for this chart"
       >
         <Sparkles class="w-3.5 h-3.5" />
@@ -870,12 +870,12 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-green-500" />
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">League Table</h3>
         </div>
         <button
           on:click={() => handleQueryClick('league_table', 'League Table')}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
           title="Generate SQL query for this chart"
         >
           <Sparkles class="w-3.5 h-3.5" />
@@ -891,12 +891,12 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-green-500" />
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Results Distribution</h3>
         </div>
         <button
           on:click={() => handleQueryClick('results_distribution', 'Results Distribution')}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
           title="Generate SQL query for this chart"
         >
           <Sparkles class="w-3.5 h-3.5" />
@@ -912,12 +912,12 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <BarChart3 class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-green-500" />
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals per Match</h3>
         </div>
         <button
           on:click={() => handleQueryClick('goal_distribution', 'Goal Distribution')}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
           title="Generate SQL query for this chart"
         >
           <Sparkles class="w-3.5 h-3.5" />
@@ -933,12 +933,12 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
         <div class="flex items-center gap-2">
-          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-green-500" />
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
         </div>
         <button
           on:click={() => handleQueryClick('team_performance', 'Team Performance')}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-green-500 dark:hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
           title="Generate SQL query for this chart"
         >
           <Sparkles class="w-3.5 h-3.5" />
