@@ -592,7 +592,7 @@
           <TrendingUp class="w-5 h-5 text-indigo-600 dark:text-green-600" />
         </div>
         <h4 class="font-semibold text-sm mb-1">Data Source</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Supabase Vector Embeddings, custom database configurations created using open source data from football-data.co.uk</p>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Supabase Vector Embeddings, custom database configurations created using open source data from <a href="https://www.football-data.co.uk/" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">football-data.co.uk</a></p>
       </div>
       <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
         <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
