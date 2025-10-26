@@ -6,7 +6,7 @@
              Filters data by selected league and initialises Chart.js theme from DOM.
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import { Line, Bar, Doughnut, Radar } from 'svelte-chartjs';
   import {
     Chart as ChartJS,
@@ -45,6 +45,11 @@
   export let matches: Match[] = [];
   export let selectedDateRange: string = 'all';
   export let selectedSeason: string = '2024-2025';
+  // Optional pre-computed chart data from API
+  export let apiChartData: Record<string, any> | null = null;
+  export let useApiData: boolean = false;
+
+  const dispatch = createEventDispatcher();
 
   let filteredMatches: Match[] = [];
   let chartTheme = 'dark';
@@ -75,6 +80,11 @@
     if (selectedDateRange !== previousRange) {
       isLoading = true;
       previousRange = selectedDateRange;
+
+      // Dispatch league change event to parent component for API re-fetch
+      dispatch('leagueChanged', {
+        league: selectedDateRange === 'all' ? null : selectedDateRange
+      });
 
       // Simulate loading for smooth transitions
       setTimeout(() => {
@@ -161,6 +171,25 @@
   })();
 
   $: goalsOverTimeData = (() => {
+    // Use API data if available
+    if (useApiData && apiChartData?.goals_trend) {
+      const apiData = apiChartData.goals_trend;
+      // Transform API data to match Chart.js format with our styling
+      return {
+        labels: apiData.labels || [],
+        datasets: (apiData.datasets || []).map((dataset: any, index: number) => ({
+          ...dataset,
+          borderColor: index === 0 ? '#10b981' : index === 1 ? '#f59e0b' : '#ef4444',
+          backgroundColor: index === 0 ? 'rgba(16, 185, 129, 0.1)' : index === 1 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+          tension: 0.4,
+          fill: index === 2,
+          pointRadius: index === 2 ? 4 : 3,
+          borderWidth: index === 2 ? 3 : 2
+        }))
+      };
+    }
+
+    // Fallback to local computation
     const recentMatches = filteredMatches.slice(-20); // Show last 20 matches
     const labels = recentMatches.map(m => format(new Date(m.match_date), 'MMM dd'));
     const homeGoals = recentMatches.map(m => m.home_score || 0);
@@ -204,6 +233,22 @@
 
   // League Table (Top Teams)
   $: leagueTableData = (() => {
+    // Use API data if available
+    if (useApiData && apiChartData?.league_table) {
+      const apiData = apiChartData.league_table;
+      return {
+        labels: apiData.labels || [],
+        datasets: (apiData.datasets || []).map((dataset: any) => ({
+          ...dataset,
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10b981',
+          borderWidth: 2,
+          borderRadius: 8
+        }))
+      };
+    }
+
+    // Fallback to local computation
     const teams = currentTopTeams.slice(0, 8);
     const teamStats = teams.map(team => {
       const teamMatches = filteredMatches.filter(m =>
@@ -246,6 +291,26 @@
 
   // Team Performance Radar Chart with real data
   $: teamPerformanceData = (() => {
+    // Use API data if available
+    if (useApiData && apiChartData?.team_performance) {
+      const apiData = apiChartData.team_performance;
+      const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
+      return {
+        labels: apiData.labels || ['Wins', 'Points/Game', 'Goals/Game', 'Defense', 'Form'],
+        datasets: (apiData.datasets || []).map((dataset: any, index: number) => ({
+          ...dataset,
+          borderColor: dataset.borderColor || colors[index] || '#10b981',
+          backgroundColor: dataset.backgroundColor || (colors[index] || '#10b981') + '30',
+          pointBackgroundColor: dataset.borderColor || colors[index] || '#10b981',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: dataset.borderColor || colors[index] || '#10b981',
+          borderWidth: 2
+        }))
+      };
+    }
+
+    // Fallback to local computation
     const teams = currentTopTeams.slice(0, 6); // Show top 6 teams for better readability
     const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'];
 
@@ -310,6 +375,22 @@
 
   // Match Results Distribution
   $: resultsDistributionData = (() => {
+    // Use API data if available
+    if (useApiData && apiChartData?.results_distribution) {
+      const apiData = apiChartData.results_distribution;
+      return {
+        labels: apiData.labels || ['Home Wins', 'Away Wins', 'Draws'],
+        datasets: (apiData.datasets || []).map((dataset: any) => ({
+          ...dataset,
+          backgroundColor: dataset.backgroundColor || ['#00ff00', '#ff00ff', '#00ffff'],
+          borderColor: dataset.borderColor || ['#00ff0080', '#ff00ff80', '#00ffff80'],
+          borderWidth: 2,
+          hoverOffset: 4
+        }))
+      };
+    }
+
+    // Fallback to local computation
     const homeWins = filteredMatches.filter(m => m.result === 'H').length;
     const awayWins = filteredMatches.filter(m => m.result === 'A').length;
     const draws = filteredMatches.filter(m => m.result === 'D').length;
@@ -328,6 +409,23 @@
 
   // Goal Distribution Bar Chart
   $: goalDistributionData = (() => {
+    // Use API data if available
+    if (useApiData && apiChartData?.goal_distribution) {
+      const apiData = apiChartData.goal_distribution;
+      return {
+        labels: apiData.labels || ['0', '1', '2', '3', '4', '5', '6+'],
+        datasets: (apiData.datasets || []).map((dataset: any) => ({
+          ...dataset,
+          backgroundColor: dataset.backgroundColor || 'rgba(0, 255, 0, 0.6)',
+          borderColor: dataset.borderColor || 'rgba(0, 255, 0, 1)',
+          borderWidth: 2,
+          borderRadius: 8,
+          hoverBackgroundColor: 'rgba(0, 255, 0, 0.8)'
+        }))
+      };
+    }
+
+    // Fallback to local computation
     const distribution: Record<string, number> = {};
     filteredMatches.forEach(m => {
       const totalGoals = (m.home_score || 0) + (m.away_score || 0);
@@ -352,112 +450,199 @@
     };
   })();
 
-  const chartOptions: ChartOptions<any> = {
+  // Theme-aware chart options with smooth animations
+  $: chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 1200,
+      easing: 'easeInOutQuart' as const,
+      animateRotate: true,
+      animateScale: true
+    },
+    transitions: {
+      active: {
+        animation: {
+          duration: 200
+        }
+      }
+    },
+    interaction: {
+      mode: 'index' as const,
+      intersect: false
+    },
     plugins: {
       legend: {
         display: true,
         labels: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#10b981' : '#059669',
           font: {
-            family: 'monospace',
-            size: 12
-          }
+            family: 'system-ui, -apple-system, sans-serif',
+            size: 12,
+            weight: '500' as any
+          },
+          padding: 12,
+          usePointStyle: true
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-        titleColor: '#00ff00',
-        bodyColor: '#00ff00',
-        borderColor: '#00ff00',
+        enabled: true,
+        backgroundColor: chartTheme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: chartTheme === 'dark' ? '#10b981' : '#059669',
+        bodyColor: chartTheme === 'dark' ? '#e5e7eb' : '#374151',
+        borderColor: chartTheme === 'dark' ? '#10b981' : '#d1d5db',
         borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
         titleFont: {
-          family: 'monospace',
-          size: 14
+          family: 'system-ui, -apple-system, sans-serif',
+          size: 14,
+          weight: '600' as any
         },
         bodyFont: {
-          family: 'monospace',
+          family: 'system-ui, -apple-system, sans-serif',
           size: 12
-        }
+        },
+        animation: {
+          duration: 150
+        } as any
       }
     },
     scales: {
       x: {
         grid: {
-          color: 'rgba(0, 255, 0, 0.1)',
+          color: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 0, 0, 0.05)',
           drawBorder: false
         },
         ticks: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#9ca3af' : '#6b7280',
           font: {
-            family: 'monospace',
+            family: 'system-ui, -apple-system, sans-serif',
             size: 10
           }
         }
       },
       y: {
         grid: {
-          color: 'rgba(0, 255, 0, 0.1)',
+          color: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 0, 0, 0.05)',
           drawBorder: false
         },
         ticks: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#9ca3af' : '#6b7280',
           font: {
-            family: 'monospace',
+            family: 'system-ui, -apple-system, sans-serif',
             size: 10
           }
         }
       }
     }
-  };
+  } as ChartOptions<any>;
 
-  const radarOptions: ChartOptions<'radar'> = {
+  // Theme-aware radar chart options with smooth animations
+  $: radarOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 1200,
+      easing: 'easeInOutQuart' as const,
+      animateRotate: true,
+      animateScale: true
+    },
+    transitions: {
+      active: {
+        animation: {
+          duration: 200
+        }
+      }
+    },
+    interaction: {
+      mode: 'point' as const
+    },
     plugins: {
       legend: {
         display: true,
-        position: 'top',
+        position: 'top' as const,
         labels: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#10b981' : '#059669',
           font: {
-            family: 'monospace',
-            size: 11
+            family: 'system-ui, -apple-system, sans-serif',
+            size: 11,
+            weight: '500' as any
           },
-          padding: 10
+          padding: 12,
+          usePointStyle: true
+        }
+      },
+      tooltip: {
+        enabled: true,
+        backgroundColor: chartTheme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: chartTheme === 'dark' ? '#10b981' : '#059669',
+        bodyColor: chartTheme === 'dark' ? '#e5e7eb' : '#374151',
+        borderColor: chartTheme === 'dark' ? '#10b981' : '#d1d5db',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: {
+          family: 'system-ui, -apple-system, sans-serif',
+          size: 14,
+          weight: '600' as any
+        },
+        bodyFont: {
+          family: 'system-ui, -apple-system, sans-serif',
+          size: 12
         }
       }
     },
     scales: {
       r: {
         angleLines: {
-          color: 'rgba(0, 255, 0, 0.2)'
+          color: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 0, 0, 0.1)'
         },
         grid: {
-          color: 'rgba(0, 255, 0, 0.2)'
+          color: chartTheme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 0, 0, 0.1)'
         },
         pointLabels: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#10b981' : '#059669',
           font: {
-            family: 'monospace',
-            size: 10
+            family: 'system-ui, -apple-system, sans-serif',
+            size: 11,
+            weight: '500' as any
           }
         },
         ticks: {
-          color: '#00ff00',
+          color: chartTheme === 'dark' ? '#9ca3af' : '#6b7280',
           backdropColor: 'transparent',
           font: {
+            family: 'system-ui, -apple-system, sans-serif',
             size: 9
           }
         }
       }
     }
-  };
+  } as ChartOptions<'radar'>;
 
   onMount(() => {
-    // Check theme
+    // Check initial theme
     chartTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+
+    // Watch for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          chartTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    // Cleanup observer on component destroy
+    return () => {
+      observer.disconnect();
+    };
   });
 </script>
 

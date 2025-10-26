@@ -45,6 +45,37 @@ export interface SchemaResponse {
   schema: Record<string, any>;
 }
 
+export interface DashboardStats {
+  total_matches: number;
+  total_goals: number;
+  home_win_percentage: number;
+  away_win_percentage: number;
+  draw_percentage: number;
+  avg_goals_per_match: number;
+  total_teams: number;
+  total_leagues: number;
+  high_scoring_matches: number;
+  clean_sheets: number;
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: Array<{
+    label?: string;
+    data: number[];
+    borderColor?: string;
+    backgroundColor?: string | string[];
+  }>;
+  type: string;
+}
+
+export interface DashboardResponse {
+  stats: DashboardStats;
+  recent_matches: any[];
+  charts: Record<string, ChartData>;
+  last_updated: string;
+}
+
 class APIService {
   private headers = {
     'Content-Type': 'application/json',
@@ -258,6 +289,123 @@ class APIService {
         API_BASE_URL
       });
       return false;
+    }
+  }
+
+  /**
+   * Fetches complete dashboard data from backend
+   * @param {string} league - Optional league filter
+   * @return {Promise<DashboardResponse>} Complete dashboard data with stats, matches, and charts
+   */
+  async getDashboardData(league?: string): Promise<DashboardResponse> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Dashboard API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches match data for dashboard
+   * @param {number} limit - Number of matches to fetch
+   * @param {string} league - Optional league filter
+   * @return {Promise<any[]>} Array of matches
+   */
+  async getDashboardMatches(limit: number = 1000, league?: string): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      if (league) params.append('league', league);
+
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/matches?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Matches API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch matches:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches dashboard statistics
+   * @param {string} league - Optional league filter
+   * @return {Promise<DashboardStats>} Dashboard statistics
+   */
+  async getDashboardStats(league?: string): Promise<DashboardStats> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/stats${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Stats API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches chart data for specific visualization
+   * @param {string} chartType - Type of chart (goals_trend, results_distribution, league_table)
+   * @param {string} league - Optional league filter
+   * @return {Promise<ChartData>} Chart-ready data
+   */
+  async getChartData(chartType: string, league?: string): Promise<ChartData> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/charts/${chartType}${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Chart API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyzes dashboard data using RAG system
+   * @param {string} query - Analysis query
+   * @param {string} league - Optional league filter
+   * @return {Promise<any>} Analysis results
+   */
+  async analyzeDashboard(query: string, league?: string): Promise<any> {
+    try {
+      const params = new URLSearchParams();
+      params.append('query', query);
+      if (league) params.append('league', league);
+
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/analyze?${params}`, {
+        method: 'POST',
+        headers: this.headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to analyze dashboard:', error);
+      throw error;
     }
   }
 }

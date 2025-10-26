@@ -27,6 +27,7 @@
   import { cubicOut } from 'svelte/easing';
   import { TrendingUp, Users, Target, BarChart2 } from 'lucide-svelte';
   import { supabase, hasValidSupabaseConfig, getRecentMatches } from '../lib/supabase';
+  import { apiService } from '../services/apiService';
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
   import type { Match } from '../types';
 
@@ -46,6 +47,9 @@
   let recentMatches: Match[] = [];
   let loading = true;
   let error: string | null = null;
+  let apiChartData: Record<string, any> | null = null;
+  let useApiData = false;
+  let isRefreshingCharts = false;
 
   // Animated counters
   let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
@@ -115,19 +119,56 @@
 
       console.log('Loading Dashboard with European league data...');
 
-      // Get ALL European league data (fetch up to 10,000 matches!)
-      const allMatches = await getRecentMatches(10000);
-      console.log('Dashboard loaded European matches:', allMatches.length);
+      // Check if backend API is available
+      const backendAvailable = await apiService.isAvailable();
 
-      // Pass ALL matches to visualizations, not just 30!
-      recentMatches = allMatches;
+      if (backendAvailable) {
+        console.log('Using backend API for optimized data fetching...');
 
-      // Calculate statistics from all fetched matches to show impressive European data
-      if (allMatches.length > 0) {
-        await calculateComprehensiveStats(allMatches);
+        // Fetch complete dashboard data from backend API
+        const dashboardData = await apiService.getDashboardData();
+
+        // Update statistics from API response
+        totalMatches.set(dashboardData.stats.total_matches);
+        totalGoals.set(dashboardData.stats.total_goals);
+        averageGoals.set(dashboardData.stats.avg_goals_per_match);
+        homeWinPercentage = dashboardData.stats.home_win_percentage;
+
+        // Set matches for visualizations
+        recentMatches = dashboardData.recent_matches;
+
+        // Store chart data from API for EnhancedVisualizations
+        apiChartData = dashboardData.charts || null;
+        useApiData = true;
+
+        console.log('Dashboard loaded from API:', {
+          matches: dashboardData.recent_matches.length,
+          totalMatches: dashboardData.stats.total_matches,
+          totalGoals: dashboardData.stats.total_goals,
+          hasChartData: !!apiChartData
+        });
+
       } else {
-        console.log('No European data found, this should not happen after import...');
-        error = 'No European league data found';
+        console.log('Backend unavailable, falling back to direct Supabase...');
+
+        // Fallback to direct Supabase queries
+        const allMatches = await getRecentMatches(10000);
+        console.log('Dashboard loaded European matches:', allMatches.length);
+
+        // Pass ALL matches to visualizations
+        recentMatches = allMatches;
+
+        // No API data available - EnhancedVisualizations will compute locally
+        apiChartData = null;
+        useApiData = false;
+
+        // Calculate statistics from all fetched matches
+        if (allMatches.length > 0) {
+          await calculateComprehensiveStats(allMatches);
+        } else {
+          console.log('No European data found, this should not happen after import...');
+          error = 'No European league data found';
+        }
       }
 
       // Update query count
@@ -136,7 +177,20 @@
 
     } catch (err) {
       console.error('Dashboard error:', err);
-      error = 'Failed to load European league dashboard data';
+      // Try fallback to direct Supabase if API fails
+      try {
+        console.log('API failed, attempting direct Supabase fallback...');
+        const allMatches = await getRecentMatches(10000);
+        recentMatches = allMatches;
+        apiChartData = null;
+        useApiData = false;
+        if (allMatches.length > 0) {
+          await calculateComprehensiveStats(allMatches);
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+        error = 'Failed to load European league dashboard data';
+      }
     } finally {
       loading = false;
     }
@@ -234,6 +288,58 @@
     goalsChart.datasets[0].data = last15.map(m =>
       (m.home_score || 0) + (m.away_score || 0)
     );
+  }
+
+  async function handleLeagueChange(event: CustomEvent) {
+    const { league } = event.detail;
+
+    console.log('League changed to:', league || 'all');
+
+    // Only re-fetch if using API data
+    if (!useApiData) {
+      console.log('Not using API, skipping re-fetch');
+      return;
+    }
+
+    try {
+      isRefreshingCharts = true;
+      console.log('Fetching dashboard data for league:', league);
+
+      // Fetch fresh dashboard data with league filter
+      const freshData = await apiService.getDashboardData(league);
+
+      // Update chart data and matches
+      apiChartData = freshData.charts || null;
+      recentMatches = freshData.recent_matches;
+
+      // Update stats
+      totalMatches.set(freshData.stats.total_matches);
+      totalGoals.set(freshData.stats.total_goals);
+      averageGoals.set(freshData.stats.avg_goals_per_match);
+      homeWinPercentage = freshData.stats.home_win_percentage;
+
+      console.log('Dashboard refreshed with league data:', {
+        league: league || 'all',
+        matches: freshData.recent_matches.length,
+        hasCharts: !!apiChartData
+      });
+
+    } catch (err) {
+      console.error('Failed to refresh charts for league:', err);
+      // Fallback to local computation on error
+      useApiData = false;
+      apiChartData = null;
+      error = 'Failed to fetch league data, using local computation';
+
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        if (error === 'Failed to fetch league data, using local computation') {
+          error = null;
+        }
+      }, 3000);
+    } finally {
+      isRefreshingCharts = false;
+    }
   }
 
   onMount(() => {
@@ -337,6 +443,32 @@
       </div>
     </div>
   </div>
+
+  <!-- European League Analytics - Primary Feature -->
+  {#if !loading && recentMatches.length > 0}
+    <div class="relative">
+      <!-- Loading overlay for chart refresh -->
+      {#if isRefreshingCharts}
+        <div class="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center transition-opacity duration-300">
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-lg border border-slate-200 dark:border-green-500/20 shadow-lg">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Updating charts...</span>
+          </div>
+        </div>
+      {/if}
+
+      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
+        <BarChart2 class="w-8 h-8 text-green-500" />
+        European League Analytics
+      </h2>
+      <EnhancedVisualizations
+        matches={recentMatches}
+        apiChartData={apiChartData}
+        useApiData={useApiData}
+        on:leagueChanged={handleLeagueChange}
+      />
+    </div>
+  {/if}
 
   <!-- Stats Grid -->
   {#if loading}
@@ -442,17 +574,6 @@
       </div>
     </div>
   </div>
-
-
-  {#if !loading && recentMatches.length > 0}
-    <div>
-      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
-        <BarChart2 class="w-8 h-8 text-green-500" />
-        European League Analytics
-      </h2>
-      <EnhancedVisualizations matches={recentMatches} />
-    </div>
-  {/if}
 </div>
 
 <style>
