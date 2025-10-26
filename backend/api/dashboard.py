@@ -208,7 +208,7 @@ async def get_chart_data(
             away_goals = []
             total_goals = []
 
-            for match in matches[:30]:  # Last 30 matches for better chart readability
+            for match in matches[:380]:  # Full season of matches to show complete timeline
                 # Format date as "Mon DD" for better display
                 match_date = match.get('match_date', '')
                 if match_date:

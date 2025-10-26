@@ -520,6 +520,16 @@
     </div>
   {/if}
 
+  <!-- Match Distribution by Month -->
+  {#if !loading && recentMatches.length > 0}
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg mb-6">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
+      <div class="h-64">
+        <canvas bind:this={chartCanvas}></canvas>
+      </div>
+    </div>
+  {/if}
+
   <!-- Stats Grid - Accurate Real-Time Data -->
   {#if !loading && recentMatches.length > 0}
     <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
@@ -536,7 +546,7 @@
           {$totalMatches.toFixed(0)}
         </div>
         <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
-          {totalTeams} teams, {useApiData ? 'live data' : 'cached'}
+          {totalTeams} teams, 2024 data
         </div>
       </div>
 
@@ -603,30 +613,6 @@
     </div>
   {/if}
 
-  <!-- Charts -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Goals Trend -->
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Goals Trend</h3>
-      <div class="h-64">
-        {#if !loading && goalsChart.labels && goalsChart.labels.length > 0}
-          <Line data={goalsChart} options={{ responsive: true, maintainAspectRatio: false }} />
-        {:else}
-          <div class="flex items-center justify-center h-full text-slate-400">
-            No data available
-          </div>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Match Distribution by Month -->
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
-      <div class="h-64">
-        <canvas bind:this={chartCanvas}></canvas>
-      </div>
-    </div>
-  </div>
 </div>
 
 <style>

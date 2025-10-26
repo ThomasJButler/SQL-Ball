@@ -71,7 +71,6 @@
 
   // League options
   const dateRanges = [
-    { value: 'all', label: 'Full Season (All Data)', icon: '🏆' },
     { value: 'E0', label: 'Premier League', icon: '🏴' },
     { value: 'SP1', label: 'La Liga', icon: '🇪🇸' },
     { value: 'D1', label: 'Bundesliga', icon: '🇩🇪' },
@@ -323,7 +322,7 @@
     }
 
     // Fallback to local computation
-    const recentMatches = filteredMatches.slice(-30); // Show last 30 matches
+    const recentMatches = filteredMatches.slice(-380); // Show full season of matches
 
     // If no matches available, return empty structure
     if (recentMatches.length === 0) {
