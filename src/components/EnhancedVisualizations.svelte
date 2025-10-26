@@ -830,29 +830,29 @@
     </div>
   </div>
 
+  <!-- Team Performance Radar - Full Width -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
+      </div>
+      <button
+        on:click={() => handleQueryClick('team_performance', 'Team Performance')}
+        class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+        title="Generate SQL query for this chart"
+      >
+        <Sparkles class="w-3.5 h-3.5" />
+        <span>Query</span>
+      </button>
+    </div>
+    <div class="h-64 sm:h-80">
+      <Radar data={teamPerformanceData} options={radarOptions} />
+    </div>
+  </div>
+
   <!-- Charts Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
-    <!-- Goals Over Time -->
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
-        </div>
-        <button
-          on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
-          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
-          title="Generate SQL query for this chart"
-        >
-          <Sparkles class="w-3.5 h-3.5" />
-          <span>Query</span>
-        </button>
-      </div>
-      <div class="h-48 sm:h-64">
-        <Line data={goalsOverTimeData} options={chartOptions} />
-      </div>
-    </div>
-
     <!-- League Table (Top Teams) -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
       <div class="flex items-center justify-between mb-4">
@@ -915,26 +915,26 @@
         <Bar data={goalDistributionData} options={chartOptions} />
       </div>
     </div>
-  </div>
 
-  <!-- Team Performance Radar - Full Width on Mobile -->
-  <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20 transition-opacity duration-500 {isLoading ? 'opacity-50' : 'opacity-100'}">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-2">
-        <Activity class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
-        <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Team Performance</h3>
+    <!-- Goals Over Time - Now with more space! -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-green-500/20">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <TrendingUp class="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-green-400 font-mono">Goals Trend</h3>
+        </div>
+        <button
+          on:click={() => handleQueryClick('goals_trend', 'Goals Trend')}
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
+          title="Generate SQL query for this chart"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>Query</span>
+        </button>
       </div>
-      <button
-        on:click={() => handleQueryClick('team_performance', 'Team Performance')}
-        class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm rounded-lg transition-colors shadow-sm"
-        title="Generate SQL query for this chart"
-      >
-        <Sparkles class="w-3.5 h-3.5" />
-        <span>Query</span>
-      </button>
-    </div>
-    <div class="h-64 sm:h-80">
-      <Radar data={teamPerformanceData} options={radarOptions} />
+      <div class="h-48 sm:h-64">
+        <Line data={goalsOverTimeData} options={chartOptions} />
+      </div>
     </div>
   </div>
 

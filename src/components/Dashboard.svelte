@@ -27,7 +27,7 @@
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
-  import { TrendingUp, Users, Target, BarChart2 } from 'lucide-svelte';
+  import { TrendingUp, Users, Target, Zap } from 'lucide-svelte';
   import { supabase, hasValidSupabaseConfig, getRecentMatches } from '../lib/supabase';
   import { apiService } from '../services/apiService';
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
@@ -59,13 +59,13 @@
   let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
   let totalGoals = tweened(0, { duration: 1800, easing: cubicOut });
   let averageGoals = tweened(0, { duration: 1200, easing: cubicOut });
-  let queriesExecuted = tweened(0, { duration: 1400, easing: cubicOut });
 
   // Statistics
   let homeWinPercentage = 0;
   let mostCommonScore = '0-0';
   let topScoringTeam = '';
   let totalTeams = 0;
+  let highestScoringMatch = { goals: 0, score: '0-0' };
 
   let goalsChart: ChartData<"line", number[], string> = {
     labels: [],
@@ -116,6 +116,18 @@
           const last15 = dashboardData.recent_matches.slice(0, 15).reverse();
           goalsChart.labels = last15.map(m => format(new Date(m.match_date), 'MMM d'));
           goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
+
+          // Calculate highest scoring match
+          let highestMatchGoals = 0;
+          let highestMatchScore = '0-0';
+          dashboardData.recent_matches.forEach(m => {
+            const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+            if (totalGoals > highestMatchGoals) {
+              highestMatchGoals = totalGoals;
+              highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+            }
+          });
+          highestScoringMatch = { goals: highestMatchGoals, score: highestMatchScore };
         }
 
         console.log('Dashboard loaded from API:', {
@@ -229,6 +241,18 @@
         mostCommonScore = score;
       }
     });
+
+    // Calculate highest scoring match
+    let highestMatchGoals = 0;
+    let highestMatchScore = '0-0';
+    validMatches.forEach(m => {
+      const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+      if (totalGoals > highestMatchGoals) {
+        highestMatchGoals = totalGoals;
+        highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+      }
+    });
+    highestScoringMatch = { goals: highestMatchGoals, score: highestMatchScore };
 
     // Count unique teams (should be close to 397 from European leagues)
     const teams = new Set<string>();
@@ -587,17 +611,17 @@
       <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
         <div class="flex items-start justify-between mb-2 sm:mb-4">
           <div class="bg-amber-500/10 dark:bg-amber-500/20 p-2 sm:p-3 rounded-lg">
-            <BarChart2 class="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" />
+            <Zap class="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" />
           </div>
         </div>
         <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-          Queries Run
+          Highest Scoring Match
         </div>
         <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
-          {$queriesExecuted.toFixed(0)}
+          {highestScoringMatch.goals} Goals
         </div>
         <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
-          Today
+          {highestScoringMatch.score}
         </div>
       </div>
     </div>
