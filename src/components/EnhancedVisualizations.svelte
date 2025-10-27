@@ -186,6 +186,15 @@
     };
 
     try {
+      // Get API key from localStorage
+      const apiKey = localStorage.getItem('openai_api_key');
+
+      if (!apiKey) {
+        queryModalData.error = 'Please add your OpenAI API key in Settings to use the query feature.';
+        queryModalData.isLoading = false;
+        return;
+      }
+
       // Chart-specific prompts for SQL generation - use explicit SQL templates for guaranteed compatibility
       const leagueFilter = selectedDateRange === 'all' ? '' : ` AND div = '${selectedDateRange}'`;
 
@@ -203,10 +212,11 @@
 
       const prompt = prompts[chartType] || `Generate this exact SQL query: SELECT * FROM matches WHERE season = '${selectedSeason}' LIMIT 100`;
 
-      // Generate SQL using the RAG API
+      // Generate SQL using the RAG API with API key
       const queryResponse = await apiService.convertToSQL({
         question: prompt,
-        season: selectedSeason
+        season: selectedSeason,
+        api_key: apiKey
       });
 
       queryModalData.sql = queryResponse.sql;
