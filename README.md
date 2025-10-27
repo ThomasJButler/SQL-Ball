@@ -2,6 +2,8 @@
 
 Football analytics platform that converts natural language questions into SQL queries and visualises European league match data.
 
+<img width="2964" height="1764" alt="image" src="https://github.com/user-attachments/assets/f40dd4fb-cd67-434a-b1ad-c08ab8a85b6e" />
+
 ## What It Does
 
 Ask questions about football in plain English, get SQL queries back. Works across 22 European leagues with 7,600+ matches.
