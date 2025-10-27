@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description OpenAI API key setup wizard with validation and privacy information.
+             Guides users through key configuration with step-by-step instructions.
+-->
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { Brain, Shield, Sparkles, Check, X, Info, ExternalLink, Key } from 'lucide-svelte';

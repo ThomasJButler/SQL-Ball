@@ -21,5 +21,5 @@ echo "Backend will be available at: http://localhost:8000"
 echo "API docs at: http://localhost:8000/docs"
 echo ""
 
-# Run the server
-uvicorn main:app --reload --port 8000
+# Run the server using the virtual environment's Python
+python -m uvicorn main:app --reload --port 8000

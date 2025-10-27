@@ -15,6 +15,8 @@
     Legend,
     LineElement,
     LineController,
+    BarElement,
+    BarController,
     LinearScale,
     CategoryScale,
     PointElement,
@@ -25,8 +27,9 @@
   import { format } from 'date-fns';
   import { tweened } from 'svelte/motion';
   import { cubicOut } from 'svelte/easing';
-  import { TrendingUp, Users, Target, BarChart2 } from 'lucide-svelte';
+  import { TrendingUp, Users, Target, Zap, Shield } from 'lucide-svelte';
   import { supabase, hasValidSupabaseConfig, getRecentMatches } from '../lib/supabase';
+  import { apiService } from '../services/apiService';
   import EnhancedVisualizations from './EnhancedVisualizations.svelte';
   import type { Match } from '../types';
 
@@ -37,6 +40,8 @@
     PointElement,
     LineElement,
     LineController,
+    BarElement,
+    BarController,
     Title,
     Tooltip,
     Legend,
@@ -46,18 +51,21 @@
   let recentMatches: Match[] = [];
   let loading = true;
   let error: string | null = null;
+  let apiChartData: Record<string, any> | null = null;
+  let useApiData = false;
+  let isRefreshingCharts = false;
 
   // Animated counters
   let totalMatches = tweened(0, { duration: 1500, easing: cubicOut });
   let totalGoals = tweened(0, { duration: 1800, easing: cubicOut });
   let averageGoals = tweened(0, { duration: 1200, easing: cubicOut });
-  let queriesExecuted = tweened(0, { duration: 1400, easing: cubicOut });
 
   // Statistics
-  let homeWinPercentage = 0;
-  let mostCommonScore = '0-0';
+  let bestDefenseTeam = '';
+  let bestDefenseGoalsConceded = 0;
   let topScoringTeam = '';
   let totalTeams = 0;
+  let highestScoringMatch = { goals: 0, score: '0-0', homeTeam: '', awayTeam: '', date: '' };
 
   let goalsChart: ChartData<"line", number[], string> = {
     labels: [],
@@ -73,41 +81,6 @@
 
   let chartCanvas: HTMLCanvasElement;
 
-  $: stats = [
-    {
-      title: 'European Matches',
-      value: $totalMatches.toFixed(0),
-      change: `${totalTeams} teams, 22 leagues`,
-      icon: Target,
-      color: 'text-green-500 dark:text-green-400',
-      bgColor: 'bg-green-500/10 dark:bg-green-500/20'
-    },
-    {
-      title: 'Total Goals',
-      value: $totalGoals.toFixed(0),
-      change: `${$averageGoals.toFixed(1)} per match`,
-      icon: TrendingUp,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/20'
-    },
-    {
-      title: 'Home Win %',
-      value: `${homeWinPercentage.toFixed(1)}%`,
-      change: mostCommonScore ? `${mostCommonScore} most common` : 'Calculating...',
-      icon: Users,
-      color: 'text-sky-600 dark:text-sky-400',
-      bgColor: 'bg-sky-500/10 dark:bg-sky-500/20'
-    },
-    {
-      title: 'Queries Run',
-      value: $queriesExecuted.toFixed(0),
-      change: 'Today',
-      icon: BarChart2,
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-500/10 dark:bg-amber-500/20'
-    }
-  ];
-
   async function loadDashboardData() {
     try {
       loading = true;
@@ -115,28 +88,130 @@
 
       console.log('Loading Dashboard with European league data...');
 
-      // Get ALL European league data (fetch up to 10,000 matches!)
-      const allMatches = await getRecentMatches(10000);
-      console.log('Dashboard loaded European matches:', allMatches.length);
+      // Check if backend API is available
+      const backendAvailable = await apiService.isAvailable();
 
-      // Pass ALL matches to visualizations, not just 30!
-      recentMatches = allMatches;
+      if (backendAvailable) {
+        console.log('Using backend API for optimized data fetching...');
 
-      // Calculate statistics from all fetched matches to show impressive European data
-      if (allMatches.length > 0) {
-        await calculateComprehensiveStats(allMatches);
+        // Fetch complete dashboard data from backend API (default to Premier League)
+        const dashboardData = await apiService.getDashboardData('E0');
+
+        // Update statistics from API response
+        totalMatches.set(dashboardData.stats.total_matches);
+        totalGoals.set(dashboardData.stats.total_goals);
+        averageGoals.set(dashboardData.stats.avg_goals_per_match);
+        totalTeams = dashboardData.stats.total_teams;
+
+        // Set matches for visualizations
+        recentMatches = dashboardData.recent_matches;
+
+        // Store chart data from API for EnhancedVisualizations
+        apiChartData = dashboardData.charts || null;
+        useApiData = true;
+
+        // Populate goalsChart for Dashboard Goals Trend chart (even when using API)
+        if (dashboardData.recent_matches.length > 0) {
+          const last15 = dashboardData.recent_matches.slice(0, 15).reverse();
+          goalsChart.labels = last15.map(m => format(new Date(m.match_date), 'MMM d'));
+          goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
+
+          // Calculate highest scoring match
+          let highestMatchGoals = 0;
+          let highestMatchScore = '0-0';
+          let highestMatchHomeTeam = '';
+          let highestMatchAwayTeam = '';
+          let highestMatchDate = '';
+          dashboardData.recent_matches.forEach(m => {
+            const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+            if (totalGoals > highestMatchGoals) {
+              highestMatchGoals = totalGoals;
+              highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+              highestMatchHomeTeam = m.home_team || '';
+              highestMatchAwayTeam = m.away_team || '';
+              highestMatchDate = m.match_date || '';
+            }
+          });
+          highestScoringMatch = {
+            goals: highestMatchGoals,
+            score: highestMatchScore,
+            homeTeam: highestMatchHomeTeam,
+            awayTeam: highestMatchAwayTeam,
+            date: highestMatchDate
+          };
+
+          // Calculate best defense (team with fewest goals conceded)
+          const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
+          dashboardData.recent_matches.forEach(m => {
+            const homeTeam = m.home_team;
+            const awayTeam = m.away_team;
+
+            if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+            if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+            teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+            teamDefenseStats[homeTeam].matches += 1;
+            teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+            teamDefenseStats[awayTeam].matches += 1;
+          });
+
+          let minGoalsConceded = Infinity;
+          Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+            if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+              minGoalsConceded = stats.conceded;
+              bestDefenseTeam = team;
+              bestDefenseGoalsConceded = stats.conceded;
+            }
+          });
+        }
+
+        console.log('Dashboard loaded from API:', {
+          matches: dashboardData.recent_matches.length,
+          totalMatches: dashboardData.stats.total_matches,
+          totalGoals: dashboardData.stats.total_goals,
+          hasChartData: !!apiChartData,
+          goalsChartLabels: goalsChart.labels.length
+        });
+
       } else {
-        console.log('No European data found, this should not happen after import...');
-        error = 'No European league data found';
-      }
+        console.log('Backend unavailable, falling back to direct Supabase...');
 
-      // Update query count
-      const savedCount = localStorage.getItem('query_count');
-      queriesExecuted.set(savedCount ? parseInt(savedCount) : 0);
+        // Fallback to direct Supabase queries
+        const allMatches = await getRecentMatches(10000);
+        console.log('Dashboard loaded European matches:', allMatches.length);
+
+        // Pass ALL matches to visualizations
+        recentMatches = allMatches;
+
+        // No API data available - EnhancedVisualizations will compute locally
+        apiChartData = null;
+        useApiData = false;
+
+        // Calculate statistics from all fetched matches
+        if (allMatches.length > 0) {
+          await calculateComprehensiveStats(allMatches);
+        } else {
+          console.log('No European data found, this should not happen after import...');
+          error = 'No European league data found';
+        }
+      }
 
     } catch (err) {
       console.error('Dashboard error:', err);
-      error = 'Failed to load European league dashboard data';
+      // Try fallback to direct Supabase if API fails
+      try {
+        console.log('API failed, attempting direct Supabase fallback...');
+        const allMatches = await getRecentMatches(10000);
+        recentMatches = allMatches;
+        apiChartData = null;
+        useApiData = false;
+        if (allMatches.length > 0) {
+          await calculateComprehensiveStats(allMatches);
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+        error = 'Failed to load European league dashboard data';
+      }
     } finally {
       loading = false;
     }
@@ -177,26 +252,53 @@
     const avgGoals = validMatches.length > 0 ? sampleGoals / validMatches.length : 0;
     averageGoals.set(avgGoals);
 
-    // Home win percentage from European data
-    const homeWins = validMatches.filter(m => m.result === 'H').length;
-    homeWinPercentage = validMatches.length > 0
-      ? (homeWins / validMatches.length) * 100
-      : 0;
-
-    // Most common score from European leagues
-    const scoreMap = new Map<string, number>();
+    // Calculate best defense (team with fewest goals conceded)
+    const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
     validMatches.forEach(m => {
-      const score = `${m.home_score}-${m.away_score}`;
-      scoreMap.set(score, (scoreMap.get(score) || 0) + 1);
+      const homeTeam = m.home_team;
+      const awayTeam = m.away_team;
+
+      if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+      if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+      teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+      teamDefenseStats[homeTeam].matches += 1;
+      teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+      teamDefenseStats[awayTeam].matches += 1;
     });
 
-    let maxCount = 0;
-    scoreMap.forEach((count, score) => {
-      if (count > maxCount) {
-        maxCount = count;
-        mostCommonScore = score;
+    let minGoalsConceded = Infinity;
+    Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+      if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+        minGoalsConceded = stats.conceded;
+        bestDefenseTeam = team;
+        bestDefenseGoalsConceded = stats.conceded;
       }
     });
+
+    // Calculate highest scoring match
+    let highestMatchGoals = 0;
+    let highestMatchScore = '0-0';
+    let highestMatchHomeTeam = '';
+    let highestMatchAwayTeam = '';
+    let highestMatchDate = '';
+    validMatches.forEach(m => {
+      const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+      if (totalGoals > highestMatchGoals) {
+        highestMatchGoals = totalGoals;
+        highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+        highestMatchHomeTeam = m.home_team || '';
+        highestMatchAwayTeam = m.away_team || '';
+        highestMatchDate = m.match_date || '';
+      }
+    });
+    highestScoringMatch = {
+      goals: highestMatchGoals,
+      score: highestMatchScore,
+      homeTeam: highestMatchHomeTeam,
+      awayTeam: highestMatchAwayTeam,
+      date: highestMatchDate
+    };
 
     // Count unique teams (should be close to 397 from European leagues)
     const teams = new Set<string>();
@@ -236,63 +338,216 @@
     );
   }
 
-  onMount(() => {
-    loadDashboardData();
+  async function handleLeagueChange(event: CustomEvent) {
+    const { league } = event.detail;
 
-    // Initialize patterns chart
-    if (chartCanvas) {
-      const ctx = chartCanvas.getContext('2d');
-      if (ctx) {
-        new ChartJS(ctx, {
-          type: 'line',
-          data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [{
-              label: 'Matches Analyzed',
-              data: [12, 18, 25, 30],
+    console.log('League changed to:', league || 'all');
+
+    // Only re-fetch if using API data
+    if (!useApiData) {
+      console.log('Not using API, skipping re-fetch');
+      return;
+    }
+
+    try {
+      isRefreshingCharts = true;
+      console.log('Fetching dashboard data for league:', league);
+
+      // Fetch fresh dashboard data with league filter
+      const freshData = await apiService.getDashboardData(league);
+
+      // Update chart data and matches
+      apiChartData = freshData.charts || null;
+      recentMatches = freshData.recent_matches;
+
+      // Update stats
+      totalMatches.set(freshData.stats.total_matches);
+      totalGoals.set(freshData.stats.total_goals);
+      averageGoals.set(freshData.stats.avg_goals_per_match);
+      totalTeams = freshData.stats.total_teams;
+
+      // Update goalsChart with new league data
+      if (freshData.recent_matches.length > 0) {
+        const last15 = freshData.recent_matches.slice(0, 15).reverse();
+        goalsChart.labels = last15.map(m => format(new Date(m.match_date), 'MMM d'));
+        goalsChart.datasets[0].data = last15.map(m => (m.home_score || 0) + (m.away_score || 0));
+      }
+
+      // Recalculate highest scoring match for the selected league
+      let highestMatchGoals = 0;
+      let highestMatchScore = '0-0';
+      let highestMatchHomeTeam = '';
+      let highestMatchAwayTeam = '';
+      let highestMatchDate = '';
+      freshData.recent_matches.forEach(m => {
+        const totalGoals = (m.home_score || 0) + (m.away_score || 0);
+        if (totalGoals > highestMatchGoals) {
+          highestMatchGoals = totalGoals;
+          highestMatchScore = `${m.home_score || 0}-${m.away_score || 0}`;
+          highestMatchHomeTeam = m.home_team || '';
+          highestMatchAwayTeam = m.away_team || '';
+          highestMatchDate = m.match_date || '';
+        }
+      });
+      highestScoringMatch = {
+        goals: highestMatchGoals,
+        score: highestMatchScore,
+        homeTeam: highestMatchHomeTeam,
+        awayTeam: highestMatchAwayTeam,
+        date: highestMatchDate
+      };
+
+      // Recalculate best defense for the selected league
+      const teamDefenseStats: Record<string, {conceded: number, matches: number}> = {};
+      freshData.recent_matches.forEach(m => {
+        const homeTeam = m.home_team;
+        const awayTeam = m.away_team;
+
+        if (!teamDefenseStats[homeTeam]) teamDefenseStats[homeTeam] = {conceded: 0, matches: 0};
+        if (!teamDefenseStats[awayTeam]) teamDefenseStats[awayTeam] = {conceded: 0, matches: 0};
+
+        teamDefenseStats[homeTeam].conceded += (m.away_score || 0);
+        teamDefenseStats[homeTeam].matches += 1;
+        teamDefenseStats[awayTeam].conceded += (m.home_score || 0);
+        teamDefenseStats[awayTeam].matches += 1;
+      });
+
+      let minGoalsConceded = Infinity;
+      Object.entries(teamDefenseStats).forEach(([team, stats]) => {
+        if (stats.matches >= 5 && stats.conceded < minGoalsConceded) {
+          minGoalsConceded = stats.conceded;
+          bestDefenseTeam = team;
+          bestDefenseGoalsConceded = stats.conceded;
+        }
+      });
+
+      console.log('Dashboard refreshed with league data:', {
+        league: league || 'all',
+        matches: freshData.recent_matches.length,
+        hasCharts: !!apiChartData,
+        goalsChartLabels: goalsChart.labels.length
+      });
+
+    } catch (err) {
+      console.error('Failed to refresh charts for league:', err);
+      // Fallback to local computation on error
+      useApiData = false;
+      apiChartData = null;
+      error = 'Failed to fetch league data, using local computation';
+
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        if (error === 'Failed to fetch league data, using local computation') {
+          error = null;
+        }
+      }, 3000);
+    } finally {
+      isRefreshingCharts = false;
+    }
+  }
+
+  // Reactive computation for match distribution by month
+  let matchDistributionChart: ChartJS | null = null;
+
+  $: if (recentMatches.length > 0 && chartCanvas) {
+    // Define all months in 2024-2025 football season (Sep 2024 - May 2025)
+    const seasonMonths = [
+      'Sep 2024', 'Oct 2024', 'Nov 2024', 'Dec 2024',
+      'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025'
+    ];
+
+    // Initialize all months with 0 matches
+    const monthCounts: Record<string, number> = {};
+    seasonMonths.forEach(month => {
+      monthCounts[month] = 0;
+    });
+
+    // Count matches in each month
+    recentMatches.forEach(match => {
+      if (match.match_date) {
+        const monthKey = format(new Date(match.match_date), 'MMM yyyy');
+        // Only count if it's in our season range
+        if (monthCounts.hasOwnProperty(monthKey)) {
+          monthCounts[monthKey]++;
+        }
+      }
+    });
+
+    // Use all season months in order (already sorted chronologically)
+    const labels = seasonMonths;
+    const data = seasonMonths.map(month => monthCounts[month]);
+
+    // Update or create chart
+    const ctx = chartCanvas.getContext('2d');
+    if (ctx) {
+      if (matchDistributionChart) {
+        matchDistributionChart.destroy();
+      }
+
+      matchDistributionChart = new ChartJS(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Matches Played',
+            data,
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+            borderColor: '#10b981',
+            borderWidth: 2,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              padding: 12,
+              titleColor: '#10b981',
+              bodyColor: '#fff',
               borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              tension: 0.4,
-              fill: true,
-            }]
+              borderWidth: 1,
+            }
           },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(156, 163, 175, 0.1)'
+              },
+              ticks: {
+                color: 'rgb(156, 163, 175)',
+                precision: 0
               }
             },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: {
-                  color: 'rgba(156, 163, 175, 0.1)'
-                },
-                ticks: {
-                  color: 'rgb(156, 163, 175)'
-                }
+            x: {
+              grid: {
+                display: false
               },
-              x: {
-                grid: {
-                  display: false
-                },
-                ticks: {
-                  color: 'rgb(156, 163, 175)'
-                }
+              ticks: {
+                color: 'rgb(156, 163, 175)',
+                maxRotation: 45,
+                minRotation: 45
               }
             }
           }
-        });
-      }
+        }
+      });
     }
+  }
+
+  onMount(() => {
+    loadDashboardData();
   });
 </script>
 
 <div class="space-y-8">
   <!-- Hero Section -->
-  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 via-emerald-600 to-teal-600 p-8 text-white">
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 dark:from-green-600 dark:via-emerald-600 dark:to-teal-600 p-8 text-white">
     <!-- Animated background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="absolute -top-10 -left-10 w-40 h-40 bg-white/10 rounded-full animate-float"></div>
@@ -304,155 +559,186 @@
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-3 h-3 bg-green-400 rounded-full live-pulse"></div>
-            <span class="text-green-200 text-sm font-semibold tracking-wide uppercase">LIVE ANALYTICS</span>
+            <div class="w-3 h-3 bg-purple-300 dark:bg-green-400 rounded-full live-pulse"></div>
+            <span class="text-purple-100 dark:text-green-200 text-sm font-semibold tracking-wide uppercase">2024-2025 SEASON</span>
           </div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">
             SQL-Ball Analytics
           </h1>
-          <p class="text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
-            RAG-powered European football analytics across 22 leagues, 11 countries, 7,681+ matches
+          <p class="text-purple-100 dark:text-green-100 text-lg md:text-xl mb-6 max-w-2xl">
+            RAG-powered European football analytics from the 2024-2025 season across 22 leagues, 11 countries, 7,681+ matches
           </p>
-
-          <!-- Quick stats -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{$averageGoals.toFixed(1)}</div>
-              <div class="text-xs text-green-200">Avg Goals</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{homeWinPercentage.toFixed(1)}%</div>
-              <div class="text-xs text-green-200">Home Wins</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">{mostCommonScore}</div>
-              <div class="text-xs text-green-200">Common Score</div>
-            </div>
-            <div class="text-center p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-              <div class="text-2xl font-bold">22</div>
-              <div class="text-xs text-green-200">Leagues</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Stats Grid -->
-  {#if loading}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {#each Array(4) as _}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg">
-          <div class="animate-pulse">
-            <div class="w-8 h-8 sm:w-12 sm:h-12 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2 sm:mb-3"></div>
-            <div class="h-3 sm:h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 sm:w-24 mb-1 sm:mb-2"></div>
-            <div class="h-6 sm:h-8 bg-slate-200 dark:bg-slate-700 rounded w-20 sm:w-32 mb-1 sm:mb-2"></div>
-            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-12 sm:w-20"></div>
+  <!-- How This Was All Put Together -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
+    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+      <Target class="w-5 h-5 text-blue-600 dark:text-green-500" />
+      How This Was All Put Together
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Zap class="w-5 h-5 text-blue-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">RAG System</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL using OpenAI API with GPT-4, custom backend APIs using FastAPI with Python scripts</p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-indigo-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <TrendingUp class="w-5 h-5 text-indigo-600 dark:text-green-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Data Source</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Supabase Vector Embeddings, custom database configurations created using open source data from <a href="https://www.football-data.co.uk/" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 hover:underline">football-data.co.uk</a></p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Users class="w-5 h-5 text-purple-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Using smart Python visualisations and charts (Chart.js, Plotly, Matplotlib)</p>
+      </div>
+      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
+          <Target class="w-5 h-5 text-amber-600" />
+        </div>
+        <h4 class="font-semibold text-sm mb-1">Tech Stack</h4>
+        <p class="text-xs text-slate-600 dark:text-slate-400">React, Svelte, Docker, Supabase, Render, Node.js</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- European League Analytics - Primary Feature -->
+  {#if !loading && recentMatches.length > 0}
+    <div class="relative">
+      <!-- Loading overlay for chart refresh -->
+      {#if isRefreshingCharts}
+        <div class="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm z-50 rounded-xl flex items-center justify-center transition-opacity duration-300">
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-lg border border-blue-200 dark:border-green-500/20 shadow-lg">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-green-500"></div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Updating charts...</span>
           </div>
         </div>
-      {/each}
+      {/if}
+
+      <h2 class="text-2xl font-bold text-indigo-900 dark:text-green-400 mb-6">
+        European League Analytics
+      </h2>
+      <EnhancedVisualizations
+        matches={recentMatches}
+        apiChartData={apiChartData}
+        useApiData={useApiData}
+        on:leagueChanged={handleLeagueChange}
+      />
     </div>
-  {:else if error}
+  {/if}
+
+  <!-- Match Distribution by Month -->
+  {#if !loading && recentMatches.length > 0}
+    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg mb-6">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Match Distribution by Month</h3>
+      <div class="h-64">
+        <canvas bind:this={chartCanvas}></canvas>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Stats Grid - Accurate Real-Time Data -->
+  {#if !loading && recentMatches.length > 0}
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-blue-500/10 dark:bg-green-500/20 p-2 sm:p-3 rounded-lg">
+            <Target class="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-green-500" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Total Matches
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {$totalMatches.toFixed(0)}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {totalTeams} teams, 2024 data
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-indigo-500/10 dark:bg-emerald-500/20 p-2 sm:p-3 rounded-lg">
+            <TrendingUp class="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600 dark:text-emerald-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Total Goals
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {$totalGoals.toFixed(0)}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {$averageGoals.toFixed(2)} per match
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-purple-500/10 dark:bg-purple-500/20 p-2 sm:p-3 rounded-lg">
+            <Shield class="w-4 h-4 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Best Defense
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {bestDefenseTeam || 'N/A'}
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {bestDefenseGoalsConceded} goals conceded
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
+        <div class="flex items-start justify-between mb-2 sm:mb-4">
+          <div class="bg-amber-500/10 dark:bg-amber-500/20 p-2 sm:p-3 rounded-lg">
+            <Zap class="w-4 h-4 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" />
+          </div>
+        </div>
+        <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Highest Scoring Match
+        </div>
+        <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
+          {highestScoringMatch.goals} Goals
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
+          {highestScoringMatch.score}
+        </div>
+        {#if highestScoringMatch.homeTeam && highestScoringMatch.awayTeam}
+          <div class="text-xs text-slate-600 dark:text-slate-400 mt-2 font-medium">
+            {highestScoringMatch.homeTeam} vs {highestScoringMatch.awayTeam}
+          </div>
+        {/if}
+        {#if highestScoringMatch.date}
+          <div class="text-xs text-slate-500 dark:text-slate-500 mt-1">
+            {format(new Date(highestScoringMatch.date), 'MMM d, yyyy')}
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
+
+  <!-- Error Display -->
+  {#if error && !loading}
     <div class="p-8 text-center bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
       <p class="text-red-600 dark:text-red-400">{error}</p>
       <button on:click={loadDashboardData} class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
         Retry
       </button>
     </div>
-  {:else}
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {#each stats as stat, i}
-        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 sm:p-6 shadow-lg hover:shadow-xl transition-shadow">
-          <div class="flex items-start justify-between mb-2 sm:mb-4">
-            <div class="{stat.bgColor} p-2 sm:p-3 rounded-lg">
-              <svelte:component this={stat.icon} class="w-4 h-4 sm:w-6 sm:h-6 {stat.color}" />
-            </div>
-          </div>
-          <div class="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-            {stat.title}
-          </div>
-          <div class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white mb-1">
-            {stat.value}
-          </div>
-          <div class="text-xs text-slate-500 dark:text-slate-500 leading-tight">
-            {stat.change}
-          </div>
-        </div>
-      {/each}
-    </div>
   {/if}
 
-  <!-- Charts -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Goals Trend</h3>
-      <div class="h-64">
-        {#if !loading && goalsChart.labels && goalsChart.labels.length > 0}
-          <Line data={goalsChart} options={{ responsive: true, maintainAspectRatio: false }} />
-        {:else}
-          <div class="flex items-center justify-center h-full text-slate-400">
-            No data available
-          </div>
-        {/if}
-      </div>
-    </div>
-
-    <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Analysis Progress</h3>
-      <div class="h-64">
-        <canvas bind:this={chartCanvas}></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- How We Analyze -->
-  <div class="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-lg">
-    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-      <Target class="w-5 h-5 text-green-500" />
-      How We Analyze
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <BarChart2 class="w-5 h-5 text-blue-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">RAG System</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Natural language to SQL</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <TrendingUp class="w-5 h-5 text-green-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Pattern Discovery</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Automatic anomaly detection</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <Users class="w-5 h-5 text-purple-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Vector Embeddings</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Semantic database search</p>
-      </div>
-      <div class="text-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-        <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg mx-auto mb-3 flex items-center justify-center">
-          <Target class="w-5 h-5 text-amber-600" />
-        </div>
-        <h4 class="font-semibold text-sm mb-1">Statistical Analysis</h4>
-        <p class="text-xs text-slate-600 dark:text-slate-400">Historical trend analysis</p>
-      </div>
-    </div>
-  </div>
-
-
-  {#if !loading && recentMatches.length > 0}
-    <div>
-      <h2 class="text-2xl font-bold text-slate-800 dark:text-green-400 mb-6 flex items-center gap-3">
-        <BarChart2 class="w-8 h-8 text-green-500" />
-        European League Analytics
-      </h2>
-      <EnhancedVisualizations matches={recentMatches} />
-    </div>
-  {/if}
 </div>
 
 <style>

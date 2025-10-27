@@ -1,3 +1,8 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Footer component with branding, social links, and project information.
+-->
 <script lang="ts">
   import { Github, Linkedin, Heart, ExternalLink } from 'lucide-svelte';
 </script>

@@ -1,6 +1,8 @@
 /**
- * RAG Service for SQL-Ball
- * Connects to FastAPI backend for NL to SQL conversion
+ * @author Tom Butler
+ * @date 2025-10-25
+ * @description RAG service for natural language to SQL conversion. Connects to FastAPI backend
+ *              for query processing, SQL optimisation, pattern discovery, and schema retrieval.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -56,7 +58,9 @@ export interface SchemaInfo {
 
 class RAGService {
   /**
-   * Convert natural language to SQL
+   * Converts natural language question to SQL query via backend
+   * @param {QueryRequest} request - Query request with question and optional parameters
+   * @return {Promise<QueryResponse>} Generated SQL with explanation and results
    */
   async processQuery(request: QueryRequest): Promise<QueryResponse> {
     try {
@@ -80,7 +84,9 @@ class RAGService {
   }
 
   /**
-   * Optimize an SQL query
+   * Optimises SQL query for better performance
+   * @param {OptimizeRequest} request - SQL to optimise with optional context
+   * @return {Promise<OptimizeResponse>} Optimised SQL with explanation
    */
   async optimizeQuery(request: OptimizeRequest): Promise<OptimizeResponse> {
     try {
@@ -104,7 +110,10 @@ class RAGService {
   }
 
   /**
-   * Discover patterns in data
+   * Discovers patterns in data (anomalies, trends, correlations)
+   * @param {string} table - Database table to analyse
+   * @param {string} [patternType='anomaly'] - Type of pattern to discover
+   * @return {Promise<Object>} Discovered patterns with SQL queries
    */
   async discoverPatterns(table: string, patternType: string = 'anomaly'): Promise<{
     patterns: Pattern[];
@@ -131,7 +140,8 @@ class RAGService {
   }
 
   /**
-   * Get database schema information
+   * Retrieves database schema information including tables and relationships
+   * @return {Promise<SchemaInfo>} Complete schema metadata
    */
   async getSchema(): Promise<SchemaInfo> {
     try {
@@ -149,7 +159,8 @@ class RAGService {
   }
 
   /**
-   * Get example queries
+   * Fetches example natural language queries for user guidance
+   * @return {Promise<any>} Example queries categorised by type
    */
   async getExamples(): Promise<any> {
     try {
@@ -167,7 +178,9 @@ class RAGService {
   }
 
   /**
-   * Validate SQL syntax
+   * Validates SQL syntax for dangerous operations
+   * @param {string} sql - SQL query to validate
+   * @return {Promise<Object>} Validation result with any error messages
    */
   async validateSQL(sql: string): Promise<{ valid: boolean; error?: string }> {
     try {
@@ -191,7 +204,8 @@ class RAGService {
   }
 
   /**
-   * Check backend health
+   * Checks backend health and RAG initialisation status
+   * @return {Promise<boolean>} True if backend is healthy and RAG is ready
    */
   async checkHealth(): Promise<boolean> {
     try {

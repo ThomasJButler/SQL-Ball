@@ -1,3 +1,10 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Natural language query builder component. Converts plain English to SQL using
+             backend RAG service with fallback to OpenAI direct. Handles query execution,
+             result visualisation, and SQL optimisation suggestions.
+-->
 <script lang="ts">
   import { Search, Sparkles, Database, Zap, Info, RefreshCw, Cpu, Copy, PlayCircle, Check, Key, AlertCircle } from 'lucide-svelte';
   import { onMount } from 'svelte';
@@ -28,10 +35,8 @@
   let isExecuting = false;
   let useBackendAPI = true;
   let backendAvailable = false;
-  let autoExecute = false; // Added missing variable
-  // Removed auto-execute functionality for deployment simplicity
+  let autoExecute = false;
 
-  // Natural language examples for the AI-powered query system
   const exampleQueries = [
     "Show me Liverpool's recent matches",
     "Find matches between Arsenal and Chelsea",
@@ -43,6 +48,9 @@
     "Find all draws in the Premier League"
   ];
 
+  /**
+   * @constructs - Initialises backend API availability check and API key status
+   */
   onMount(async () => {
     // Check if backend API is available
     backendAvailable = await apiService.isAvailable();
@@ -53,12 +61,10 @@
       hasApiKey = !!apiKey;
       useBackendAPI = false;
     } else {
-      // Backend is available, no need for direct API key
+      // Backend is available
       hasApiKey = true;
       useBackendAPI = true;
     }
-
-    // Auto-execute functionality removed
   });
 
   function navigateToSettings() {

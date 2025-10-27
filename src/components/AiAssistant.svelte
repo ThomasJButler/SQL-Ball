@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description AI assistant chat component for football predictions and analysis. Supports OpenAI
+             and Anthropic APIs with markdown rendering, code syntax highlighting, and conversation history.
+-->
 <script lang="ts">
   import { Send, Bot, Key, AlertCircle, Sparkles, Copy, Check, RotateCcw, Maximize, Minimize } from 'lucide-svelte';
   import { onMount } from 'svelte';

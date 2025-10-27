@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Pattern discovery interface component. Displays statistical anomalies across European
+             football matches including upsets, high-scoring games, and inefficient performances.
+-->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Sparkles, TrendingUp, AlertTriangle, Zap, Eye, Download } from 'lucide-svelte';

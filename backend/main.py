@@ -23,6 +23,7 @@ from rag.football import FootballTermMapper
 from api.query import query_router, set_dependencies as set_query_deps
 from api.optimize import optimize_router, set_sql_chain
 from api.execute import execute_router
+from api.dashboard import router as dashboard_router
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -35,8 +36,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", 
-        "http://localhost:5174", 
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",  # Current Vite port (fixing CORS issue)
+        "http://localhost:5176",  # Future-proofing
         "http://localhost:4173",  # Vite dev and preview
         "https://*.vercel.app",   # Vercel preview deployments
         "https://sql-ball.vercel.app",  # Production domain (update with your actual domain)
@@ -78,6 +81,7 @@ async def startup_event():
 app.include_router(query_router, prefix="/api")
 app.include_router(optimize_router, prefix="/api")
 app.include_router(execute_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
 
 # Health check endpoint
 @app.get("/health")
@@ -99,6 +103,10 @@ async def root():
             "/api/optimize": "Optimize SQL queries",
             "/api/schema": "Get database schema",
             "/api/patterns": "Discover patterns in data",
+            "/api/dashboard": "Get complete dashboard data",
+            "/api/dashboard/matches": "Get match data",
+            "/api/dashboard/stats": "Get statistics",
+            "/api/dashboard/charts/{type}": "Get chart data",
             "/health": "Health check",
             "/docs": "API documentation"
         }

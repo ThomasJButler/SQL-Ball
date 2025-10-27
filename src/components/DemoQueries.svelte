@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Demo query examples component. Provides categorised example natural language queries
+             for player performance, team analysis, and match statistics.
+-->
 <script lang="ts">
   import { TrendingUp, Users, Trophy, Target, Activity, Star } from 'lucide-svelte';
 

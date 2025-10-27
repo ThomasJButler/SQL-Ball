@@ -1,3 +1,9 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Header component with theme toggle, sidebar navigation, and social links.
+             Persists theme preference to localStorage and respects system colour scheme.
+-->
 <script lang="ts">
   import { Sun, Moon, Github, Menu, Linkedin } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
@@ -20,7 +26,7 @@
     dispatch('toggleDarkMode');
   }
 
-  // Initialize theme based on saved preference
+  // Initialise theme based on saved preference or system setting
   if (typeof window !== 'undefined') {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (savedTheme === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

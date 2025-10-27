@@ -1,8 +1,13 @@
+<!--
+@author Tom Butler
+@date 2025-10-25
+@description Live scrolling ticker component displaying recent match results and updates.
+-->
 <script lang="ts">
   import { onMount } from 'svelte';
   import { dataService } from '../services/dataService';
   import { format } from 'date-fns';
-  
+
   interface TickerItem {
     text: string;
     type: 'match' | 'prediction' | 'update';

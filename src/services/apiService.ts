@@ -1,6 +1,8 @@
 /**
- * API Service Layer for Backend Communication
- * Handles all RAG-related API calls to the FastAPI backend
+ * @author Tom Butler
+ * @date 2025-10-25
+ * @description API service layer for backend communication. Handles RAG-related API calls
+ *              to FastAPI backend including query conversion, SQL optimisation, and pattern discovery.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -43,13 +45,45 @@ export interface SchemaResponse {
   schema: Record<string, any>;
 }
 
+export interface DashboardStats {
+  total_matches: number;
+  total_goals: number;
+  home_win_percentage: number;
+  away_win_percentage: number;
+  draw_percentage: number;
+  avg_goals_per_match: number;
+  total_teams: number;
+  total_leagues: number;
+  high_scoring_matches: number;
+  clean_sheets: number;
+}
+
+export interface ChartData {
+  labels: string[];
+  datasets: Array<{
+    label?: string;
+    data: number[];
+    borderColor?: string;
+    backgroundColor?: string | string[];
+  }>;
+  type: string;
+}
+
+export interface DashboardResponse {
+  stats: DashboardStats;
+  recent_matches: any[];
+  charts: Record<string, ChartData>;
+  last_updated: string;
+}
+
 class APIService {
   private headers = {
     'Content-Type': 'application/json',
   };
 
   /**
-   * Health check for the API
+   * Checks backend API health and RAG initialisation status
+   * @return {Promise<boolean>} True if backend is healthy and RAG is initialised
    */
   async healthCheck(): Promise<boolean> {
     try {
@@ -63,7 +97,9 @@ class APIService {
   }
 
   /**
-   * Convert natural language to SQL
+   * Converts natural language question to SQL query using backend RAG system
+   * @param {QueryRequest} request - Query request with question, season, and optional API key
+   * @return {Promise<QueryResponse>} Generated SQL query with explanation and results
    */
   async convertToSQL(request: QueryRequest): Promise<QueryResponse> {
     try {
@@ -85,7 +121,9 @@ class APIService {
   }
 
   /**
-   * Optimize SQL query
+   * Optimises SQL query for better performance
+   * @param {OptimizeRequest} request - SQL query to optimise with optional context
+   * @return {Promise<OptimizeResponse>} Optimised SQL with performance improvements
    */
   async optimizeSQL(request: OptimizeRequest): Promise<OptimizeResponse> {
     try {
@@ -107,7 +145,9 @@ class APIService {
   }
 
   /**
-   * Discover patterns in the data
+   * Discovers patterns in football data (upsets, high-scoring games, anomalies, trends)
+   * @param {PatternDiscoveryRequest} request - Pattern type and filtering criteria
+   * @return {Promise<QueryResponse>} SQL query and results for discovered patterns
    */
   async discoverPatterns(request: PatternDiscoveryRequest): Promise<QueryResponse> {
     try {
@@ -129,7 +169,8 @@ class APIService {
   }
 
   /**
-   * Get database schema information
+   * Retrieves database schema information including tables and structure
+   * @return {Promise<SchemaResponse>} Database schema with tables and column definitions
    */
   async getSchema(): Promise<SchemaResponse> {
     try {
@@ -147,7 +188,10 @@ class APIService {
   }
 
   /**
-   * Validate SQL for common issues before execution
+   * Validates SQL for common issues before execution
+   * Checks for conflicting season conditions that would return zero results
+   * @param {string} sql - SQL query to validate
+   * @return {string[]} Array of validation error messages
    */
   private validateSQL(sql: string): string[] {
     const errors: string[] = [];
@@ -167,7 +211,10 @@ class APIService {
   }
 
   /**
-   * Execute SQL query (if backend is configured with database access)
+   * Executes SQL query via backend (requires database access configuration)
+   * Validates query before execution and handles backend errors gracefully
+   * @param {string} sql - SQL query to execute
+   * @return {Promise<any[]>} Query results as array of row objects
    */
   async executeSQL(sql: string): Promise<any[]> {
     try {
@@ -199,7 +246,9 @@ class APIService {
   }
 
   /**
-   * Check if backend API is available
+   * Checks if backend API is available with 5 second timeout
+   * Verifies both connectivity and RAG system initialisation
+   * @return {Promise<boolean>} True if backend is reachable and fully initialised
    */
   async isAvailable(): Promise<boolean> {
     try {
@@ -240,6 +289,123 @@ class APIService {
         API_BASE_URL
       });
       return false;
+    }
+  }
+
+  /**
+   * Fetches complete dashboard data from backend
+   * @param {string} league - Optional league filter
+   * @return {Promise<DashboardResponse>} Complete dashboard data with stats, matches, and charts
+   */
+  async getDashboardData(league?: string): Promise<DashboardResponse> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Dashboard API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches match data for dashboard
+   * @param {number} limit - Number of matches to fetch
+   * @param {string} league - Optional league filter
+   * @return {Promise<any[]>} Array of matches
+   */
+  async getDashboardMatches(limit: number = 1000, league?: string): Promise<any[]> {
+    try {
+      const params = new URLSearchParams();
+      params.append('limit', limit.toString());
+      if (league) params.append('league', league);
+
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/matches?${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Matches API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch matches:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches dashboard statistics
+   * @param {string} league - Optional league filter
+   * @return {Promise<DashboardStats>} Dashboard statistics
+   */
+  async getDashboardStats(league?: string): Promise<DashboardStats> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/stats${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Stats API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetches chart data for specific visualization
+   * @param {string} chartType - Type of chart (goals_trend, results_distribution, league_table)
+   * @param {string} league - Optional league filter
+   * @return {Promise<ChartData>} Chart-ready data
+   */
+  async getChartData(chartType: string, league?: string): Promise<ChartData> {
+    try {
+      const params = league ? `?league=${encodeURIComponent(league)}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/charts/${chartType}${params}`);
+
+      if (!response.ok) {
+        throw new Error(`Chart API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyzes dashboard data using RAG system
+   * @param {string} query - Analysis query
+   * @param {string} league - Optional league filter
+   * @return {Promise<any>} Analysis results
+   */
+  async analyzeDashboard(query: string, league?: string): Promise<any> {
+    try {
+      const params = new URLSearchParams();
+      params.append('query', query);
+      if (league) params.append('league', league);
+
+      const response = await fetch(`${API_BASE_URL}/api/dashboard/analyze?${params}`, {
+        method: 'POST',
+        headers: this.headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis API request failed: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to analyze dashboard:', error);
+      throw error;
     }
   }
 }

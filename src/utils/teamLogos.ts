@@ -1,6 +1,8 @@
 /**
- * Team logo generator utility
- * Creates SVG data URIs for team badges
+ * @author Tom Butler
+ * @date 2025-10-25
+ * @description Team logo generator utility for Premier League and Championship teams.
+ *              Creates SVG data URIs for team badges with authentic club colours.
  */
 
 // Premier League team colors (2025/26 season)

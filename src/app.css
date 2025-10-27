@@ -37,15 +37,15 @@
     --secondary: hsl(var(--secondary-hsl) 50%);
     /* Define other semantic colors using HSL */
 
-    --bg-base: theme('colors.white');
-    --bg-alt: theme('colors.slate.100');
-    --bg-sidebar: theme('colors.white');
-    --bg-navbar: hsla(0, 0%, 100%, 0.7); /* Base navbar bg */
-    --text-base: theme('colors.slate.800');
-    --text-muted: theme('colors.slate.500');
-    --border-base: theme('colors.slate.200');
-    --border-sidebar: theme('colors.slate.200');
-    --border-navbar: theme('colors.slate.200');
+    --bg-base: #fefcff; /* Soft white with purple tint */
+    --bg-alt: #f5f3ff;  /* Light purple-gray */
+    --bg-sidebar: #faf8ff; /* Soft sidebar */
+    --bg-navbar: hsla(250, 60%, 98%, 0.7); /* Soft purple-tinted navbar */
+    --text-base: #3f3356; /* Softer purple-gray text instead of harsh black */
+    --text-muted: #6b5b95; /* Purple-gray muted */
+    --border-base: #e9d5ff; /* Soft purple borders */
+    --border-sidebar: #e9d5ff;
+    --border-navbar: #e9d5ff;
   }
 
   .dark {
@@ -62,12 +62,12 @@
 
   body {
     @apply font-sans antialiased text-slate-800 dark:text-slate-200;
-    background: #f8fafc;
+    background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #ede9fe 100%);
     position: relative;
     min-height: 100vh;
     overflow-x: hidden;
   }
-  
+
   .dark body {
     background: #0f172a;
   }
@@ -89,7 +89,7 @@
   /* Add more base styles if needed: links, headings etc. */
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
-    @apply text-slate-800 dark:text-slate-200;
+    @apply text-indigo-900 dark:text-slate-200;
   }
 }
 
