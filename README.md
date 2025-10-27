@@ -67,7 +67,7 @@ Data flow: NL query → backend RAG → schema embedding retrieval → SQL gener
 - **Backend:** Render/Railway (see [render.yaml](render.yaml))
 - **Database:** Supabase Cloud
 
-Set environment variables in deployment platform settings. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+Set environment variables in deployment platform settings. 
 
 ## Data
 
